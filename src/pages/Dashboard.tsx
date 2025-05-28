@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Plus, LogOut, Edit2, Trash2 } from 'lucide-react';
+import { Plus, LogOut, Edit2, Trash2, TrendingUp, Clock, User } from 'lucide-react';
 
 interface Activity {
   id: string;
@@ -20,25 +21,53 @@ interface Activity {
   priority: 'low' | 'medium' | 'high';
   due_date: string;
   created_at: string;
+  progress: number;
+  user_id: string;
+}
+
+interface ProgressLog {
+  id: string;
+  activity_id: string;
+  user_id: string;
+  previous_progress: number;
+  new_progress: number;
+  comment: string;
+  created_at: string;
+}
+
+interface Profile {
+  id: string;
+  name: string;
+  email: string;
 }
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: 'pending' as const,
-    priority: 'medium' as const,
+    status: 'pending' as 'pending' | 'in_progress' | 'completed',
+    priority: 'medium' as 'low' | 'medium' | 'high',
     due_date: '',
+  });
+
+  const [progressFormData, setProgressFormData] = useState({
+    new_progress: 0,
+    comment: '',
   });
 
   useEffect(() => {
     fetchActivities();
+    fetchProfiles();
   }, []);
 
   const fetchActivities = async () => {
@@ -53,6 +82,35 @@ const Dashboard = () => {
     } catch (error: any) {
       console.error('Erro ao buscar atividades:', error);
       toast.error('Erro ao carregar atividades');
+    }
+  };
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error: any) {
+      console.error('Erro ao buscar perfis:', error);
+    }
+  };
+
+  const fetchProgressLogs = async (activityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('activity_progress_logs')
+        .select('*')
+        .eq('activity_id', activityId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProgressLogs(data || []);
+    } catch (error: any) {
+      console.error('Erro ao buscar logs de progresso:', error);
+      toast.error('Erro ao carregar histórico de progresso');
     }
   };
 
@@ -86,6 +144,45 @@ const Dashboard = () => {
     } catch (error: any) {
       console.error('Erro ao salvar atividade:', error);
       toast.error('Erro ao salvar atividade');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProgressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedActivity) return;
+    
+    if (progressFormData.comment.trim() === '') {
+      toast.error('Comentário é obrigatório para registrar progresso');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('activity_progress_logs')
+        .insert({
+          activity_id: selectedActivity.id,
+          user_id: user?.id,
+          previous_progress: selectedActivity.progress || 0,
+          new_progress: progressFormData.new_progress,
+          comment: progressFormData.comment,
+        });
+
+      if (error) throw error;
+      
+      toast.success('Progresso registrado com sucesso!');
+      setShowProgressModal(false);
+      setProgressFormData({ new_progress: 0, comment: '' });
+      fetchActivities();
+      if (selectedActivity) {
+        fetchProgressLogs(selectedActivity.id);
+      }
+    } catch (error: any) {
+      console.error('Erro ao registrar progresso:', error);
+      toast.error('Erro ao registrar progresso');
     } finally {
       setLoading(false);
     }
@@ -131,6 +228,21 @@ const Dashboard = () => {
       console.error('Erro ao excluir atividade:', error);
       toast.error('Erro ao excluir atividade');
     }
+  };
+
+  const handleViewProgress = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setProgressFormData({ 
+      new_progress: activity.progress || 0, 
+      comment: '' 
+    });
+    fetchProgressLogs(activity.id);
+    setShowProgressModal(true);
+  };
+
+  const getUserName = (userId: string) => {
+    const profile = profiles.find(p => p.id === userId);
+    return profile?.name || profile?.email || 'Usuário desconhecido';
   };
 
   const getStatusBadge = (status: string) => {
@@ -252,7 +364,8 @@ const Dashboard = () => {
                     <Label>Status</Label>
                     <Select
                       value={formData.status}
-                      onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                      onValueChange={(value: 'pending' | 'in_progress' | 'completed') => 
+                        setFormData({ ...formData, status: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -269,7 +382,8 @@ const Dashboard = () => {
                     <Label>Prioridade</Label>
                     <Select
                       value={formData.priority}
-                      onValueChange={(value: any) => setFormData({ ...formData, priority: value })}
+                      onValueChange={(value: 'low' | 'medium' | 'high') => 
+                        setFormData({ ...formData, priority: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -296,6 +410,119 @@ const Dashboard = () => {
           </Card>
         )}
 
+        {/* Modal de Progresso */}
+        {showProgressModal && selectedActivity && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">
+                  Progresso: {selectedActivity.title}
+                </h2>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowProgressModal(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Progresso Atual */}
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Progresso Atual</span>
+                    <span className="text-sm text-gray-600">{selectedActivity.progress}%</span>
+                  </div>
+                  <Progress value={selectedActivity.progress} className="w-full" />
+                </div>
+
+                {/* Formulário de Novo Progresso */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Registrar Novo Progresso</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleProgressSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new_progress">Novo Progresso (%)</Label>
+                        <Input
+                          id="new_progress"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={progressFormData.new_progress}
+                          onChange={(e) => setProgressFormData({
+                            ...progressFormData,
+                            new_progress: parseInt(e.target.value) || 0
+                          })}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="comment">Comentário (obrigatório)</Label>
+                        <Textarea
+                          id="comment"
+                          value={progressFormData.comment}
+                          onChange={(e) => setProgressFormData({
+                            ...progressFormData,
+                            comment: e.target.value
+                          })}
+                          placeholder="Descreva o que foi realizado..."
+                          required
+                          rows={3}
+                        />
+                      </div>
+
+                      <Button type="submit" disabled={loading} className="w-full">
+                        {loading ? 'Registrando...' : 'Registrar Progresso'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Histórico de Progresso */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Histórico de Progresso</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {progressLogs.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">
+                          Nenhum registro de progresso encontrado
+                        </p>
+                      ) : (
+                        progressLogs.map((log) => (
+                          <div key={log.id} className="border-l-4 border-blue-500 pl-4 py-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <TrendingUp className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium">
+                                {log.previous_progress}% → {log.new_progress}%
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">{log.comment}</p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {getUserName(log.user_id)}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(log.created_at).toLocaleString('pt-BR')}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {activities.map((activity) => (
             <Card key={activity.id} className="hover:shadow-lg transition-shadow">
@@ -303,6 +530,14 @@ const Dashboard = () => {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{activity.title}</CardTitle>
                   <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleViewProgress(activity)}
+                      title="Ver progresso"
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -323,6 +558,13 @@ const Dashboard = () => {
                   {getStatusBadge(activity.status)}
                   {getPriorityBadge(activity.priority)}
                 </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progresso</span>
+                    <span>{activity.progress || 0}%</span>
+                  </div>
+                  <Progress value={activity.progress || 0} className="w-full" />
+                </div>
               </CardHeader>
               <CardContent>
                 {activity.description && (
@@ -336,6 +578,9 @@ const Dashboard = () => {
                   </p>
                 )}
                 <p className="text-xs text-gray-400 mt-2">
+                  Criado por: {getUserName(activity.user_id)}
+                </p>
+                <p className="text-xs text-gray-400">
                   Criado em: {new Date(activity.created_at).toLocaleDateString('pt-BR')}
                 </p>
               </CardContent>

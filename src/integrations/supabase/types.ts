@@ -16,6 +16,7 @@ export type Database = {
           due_date: string | null
           id: string
           priority: string
+          progress: number | null
           status: string
           title: string
           updated_at: string
@@ -27,6 +28,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          progress?: number | null
           status?: string
           title: string
           updated_at?: string
@@ -38,12 +40,51 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string
+          progress?: number | null
           status?: string
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      activity_progress_logs: {
+        Row: {
+          activity_id: string
+          comment: string
+          created_at: string
+          id: string
+          new_progress: number
+          previous_progress: number
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          new_progress: number
+          previous_progress?: number
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          new_progress?: number
+          previous_progress?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_progress_logs_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
