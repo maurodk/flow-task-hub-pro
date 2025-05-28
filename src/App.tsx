@@ -5,8 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import Navbar from "@/components/Navbar";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import Mural from "./pages/Mural";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +27,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/auth" replace />;
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  );
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -59,6 +71,22 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <Dashboard />
+        </ProtectedRoute>
+      } 
+    />
+    <Route 
+      path="/profile" 
+      element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } 
+    />
+    <Route 
+      path="/mural" 
+      element={
+        <ProtectedRoute>
+          <Mural />
         </ProtectedRoute>
       } 
     />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +22,7 @@ interface Activity {
   created_at: string;
   progress: number;
   user_id: string;
+  updated_at: string;
 }
 
 interface ProgressLog {
@@ -42,7 +42,7 @@ interface Profile {
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -78,7 +78,15 @@ const Dashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Garantir que os dados estão tipados corretamente
+      const typedActivities: Activity[] = (data || []).map(activity => ({
+        ...activity,
+        status: activity.status as 'pending' | 'in_progress' | 'completed',
+        priority: activity.priority as 'low' | 'medium' | 'high',
+      }));
+      
+      setActivities(typedActivities);
     } catch (error: any) {
       console.error('Erro ao buscar atividades:', error);
       toast.error('Erro ao carregar atividades');
@@ -318,6 +326,18 @@ const Dashboard = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Botão para nova atividade */}
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Atividades</h1>
+          <Button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nova Atividade
+          </Button>
+        </div>
+
         {showForm && (
           <Card className="mb-8">
             <CardHeader>
