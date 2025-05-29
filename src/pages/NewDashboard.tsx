@@ -17,6 +17,7 @@ interface Activity {
   created_at: string;
   due_date: string | null;
   activity_type: 'standard' | 'template_based' | 'recurring';
+  user_id: string;
 }
 
 const NewDashboard = () => {
@@ -36,7 +37,21 @@ const NewDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Type the data properly to match our Activity interface
+      const typedActivities: Activity[] = (data || []).map(activity => ({
+        id: activity.id,
+        title: activity.title,
+        status: activity.status as 'pending' | 'in_progress' | 'completed' | 'on_hold',
+        priority: activity.priority as 'low' | 'medium' | 'high',
+        progress: activity.progress || 0,
+        created_at: activity.created_at,
+        due_date: activity.due_date,
+        activity_type: activity.activity_type as 'standard' | 'template_based' | 'recurring',
+        user_id: activity.user_id,
+      }));
+      
+      setActivities(typedActivities);
     } catch (error) {
       console.error('Erro ao buscar atividades:', error);
     } finally {
@@ -51,7 +66,6 @@ const NewDashboard = () => {
   const completedActivities = activities.filter(a => a.status === 'completed').length;
   const onHoldActivities = activities.filter(a => a.status === 'on_hold').length;
 
-  // Dados para gráficos
   const statusData = [
     { name: 'Pendentes', value: pendingActivities, color: '#94a3b8' },
     { name: 'Em Progresso', value: inProgressActivities, color: '#3b82f6' },
@@ -71,15 +85,12 @@ const NewDashboard = () => {
     { name: 'Repetitiva', value: activities.filter(a => a.activity_type === 'recurring').length },
   ];
 
-  // Progresso médio das atividades
   const averageProgress = activities.length > 0 
     ? activities.reduce((sum, activity) => sum + (activity.progress || 0), 0) / activities.length 
     : 0;
 
-  // Atividades recentes
   const recentActivities = activities.slice(0, 5);
 
-  // Atividades próximas do vencimento
   const upcomingActivities = activities
     .filter(a => a.due_date && a.status !== 'completed')
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
@@ -225,7 +236,6 @@ const NewDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Gráfico de Status */}
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Status das Atividades</CardTitle>
@@ -252,7 +262,6 @@ const NewDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Gráfico de Prioridades */}
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Distribuição por Prioridade</CardTitle>
@@ -271,9 +280,7 @@ const NewDashboard = () => {
           </Card>
         </div>
 
-        {/* Atividades Recentes e Próximas do Vencimento */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Atividades Recentes */}
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Atividades Recentes</CardTitle>
@@ -313,7 +320,6 @@ const NewDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Próximas do Vencimento */}
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Próximas do Vencimento</CardTitle>
@@ -349,7 +355,6 @@ const NewDashboard = () => {
           </Card>
         </div>
 
-        {/* Gráfico de Tipos de Atividade */}
         <div className="mt-8">
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
