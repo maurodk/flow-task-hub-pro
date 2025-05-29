@@ -11,42 +11,71 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          activity_type: string | null
           created_at: string
           description: string | null
           due_date: string | null
           id: string
+          is_recurring: boolean | null
+          last_completed_at: string | null
+          next_due_at: string | null
           priority: string
           progress: number | null
+          recurrence_time: string | null
+          recurrence_type: string | null
           status: string
+          template_id: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          activity_type?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          is_recurring?: boolean | null
+          last_completed_at?: string | null
+          next_due_at?: string | null
           priority?: string
           progress?: number | null
+          recurrence_time?: string | null
+          recurrence_type?: string | null
           status?: string
+          template_id?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          activity_type?: string | null
           created_at?: string
           description?: string | null
           due_date?: string | null
           id?: string
+          is_recurring?: boolean | null
+          last_completed_at?: string | null
+          next_due_at?: string | null
           priority?: string
           progress?: number | null
+          recurrence_time?: string | null
+          recurrence_type?: string | null
           status?: string
+          template_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activities_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "activity_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       activity_progress_logs: {
         Row: {
@@ -85,6 +114,106 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      activity_subtasks: {
+        Row: {
+          activity_id: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_completed: boolean | null
+          order_index: number
+          title: string
+        }
+        Insert: {
+          activity_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          order_index?: number
+          title: string
+        }
+        Update: {
+          activity_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_subtasks_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_template_subtasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_template_subtasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "activity_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

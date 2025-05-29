@@ -5,41 +5,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Clock, CheckCircle, Pause, TrendingUp, Calendar, Users } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } from 'lucide-react';
 
 interface Activity {
   id: string;
   title: string;
-  description: string;
   status: 'pending' | 'in_progress' | 'completed' | 'on_hold';
   priority: 'low' | 'medium' | 'high';
-  due_date: string;
-  created_at: string;
   progress: number;
-  user_id: string;
-  updated_at: string;
-}
-
-interface DashboardStats {
-  total: number;
-  pending: number;
-  in_progress: number;
-  completed: number;
-  on_hold: number;
+  created_at: string;
+  due_date: string | null;
+  activity_type: 'standard' | 'template_based' | 'recurring';
 }
 
 const NewDashboard = () => {
   const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    total: 0,
-    pending: 0,
-    in_progress: 0,
-    completed: 0,
-    on_hold: 0,
-  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchActivities();
@@ -53,71 +36,67 @@ const NewDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      const typedActivities: Activity[] = (data || []).map(activity => ({
-        ...activity,
-        status: activity.status as 'pending' | 'in_progress' | 'completed' | 'on_hold',
-        priority: activity.priority as 'low' | 'medium' | 'high',
-      }));
-      
-      setActivities(typedActivities);
-      
-      // Calcular estatísticas
-      const newStats = {
-        total: typedActivities.length,
-        pending: typedActivities.filter(a => a.status === 'pending').length,
-        in_progress: typedActivities.filter(a => a.status === 'in_progress').length,
-        completed: typedActivities.filter(a => a.status === 'completed').length,
-        on_hold: typedActivities.filter(a => a.status === 'on_hold').length,
-      };
-      
-      setStats(newStats);
-    } catch (error: any) {
+      setActivities(data || []);
+    } catch (error) {
       console.error('Erro ao buscar atividades:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const chartData = [
-    {
-      name: 'Pendentes',
-      value: stats.pending,
-      color: '#f59e0b',
-    },
-    {
-      name: 'Em Progresso',
-      value: stats.in_progress,
-      color: '#3b82f6',
-    },
-    {
-      name: 'Concluídas',
-      value: stats.completed,
-      color: '#10b981',
-    },
-    {
-      name: 'Em Espera',
-      value: stats.on_hold,
-      color: '#6b7280',
-    },
+  // Estatísticas das atividades
+  const totalActivities = activities.length;
+  const pendingActivities = activities.filter(a => a.status === 'pending').length;
+  const inProgressActivities = activities.filter(a => a.status === 'in_progress').length;
+  const completedActivities = activities.filter(a => a.status === 'completed').length;
+  const onHoldActivities = activities.filter(a => a.status === 'on_hold').length;
+
+  // Dados para gráficos
+  const statusData = [
+    { name: 'Pendentes', value: pendingActivities, color: '#94a3b8' },
+    { name: 'Em Progresso', value: inProgressActivities, color: '#3b82f6' },
+    { name: 'Concluídas', value: completedActivities, color: '#10b981' },
+    { name: 'Em Espera', value: onHoldActivities, color: '#f59e0b' },
   ];
 
-  const barChartData = [
-    { month: 'Jan', atividades: 12 },
-    { month: 'Fev', atividades: 19 },
-    { month: 'Mar', atividades: 15 },
-    { month: 'Abr', atividades: 25 },
-    { month: 'Mai', atividades: 22 },
-    { month: 'Jun', atividades: 30 },
+  const priorityData = [
+    { name: 'Alta', value: activities.filter(a => a.priority === 'high').length },
+    { name: 'Média', value: activities.filter(a => a.priority === 'medium').length },
+    { name: 'Baixa', value: activities.filter(a => a.priority === 'low').length },
   ];
 
+  const typeData = [
+    { name: 'Padrão', value: activities.filter(a => a.activity_type === 'standard').length },
+    { name: 'Predefinida', value: activities.filter(a => a.activity_type === 'template_based').length },
+    { name: 'Repetitiva', value: activities.filter(a => a.activity_type === 'recurring').length },
+  ];
+
+  // Progresso médio das atividades
+  const averageProgress = activities.length > 0 
+    ? activities.reduce((sum, activity) => sum + (activity.progress || 0), 0) / activities.length 
+    : 0;
+
+  // Atividades recentes
   const recentActivities = activities.slice(0, 5);
+
+  // Atividades próximas do vencimento
+  const upcomingActivities = activities
+    .filter(a => a.due_date && a.status !== 'completed')
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+    .slice(0, 5);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="h-4 w-4 text-amber-500" />;
-      case 'in_progress': return <Activity className="h-4 w-4 text-blue-500" />;
-      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'on_hold': return <Pause className="h-4 w-4 text-gray-500" />;
-      default: return <Activity className="h-4 w-4" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-gray-500" />;
+      case 'in_progress':
+        return <Activity className="h-4 w-4 text-blue-500" />;
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'on_hold':
+        return <Pause className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <Calendar className="h-4 w-4" />;
     }
   };
 
@@ -131,9 +110,34 @@ const NewDashboard = () => {
     return labels[status as keyof typeof labels] || status;
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'low':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Carregando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Dashboard
@@ -144,181 +148,227 @@ const NewDashboard = () => {
         </div>
 
         {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Atividades</CardTitle>
-              <Activity className="h-4 w-4" />
+              <CardTitle className="text-sm font-medium">Total</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-blue-100">
-                Total de atividades criadas
-              </p>
+              <div className="text-2xl font-bold">{totalActivities}</div>
+              <p className="text-xs text-muted-foreground">atividades</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.pending}</div>
-              <p className="text-xs text-amber-100">
-                Aguardando início
-              </p>
+              <div className="text-2xl font-bold">{pendingActivities}</div>
+              <p className="text-xs text-muted-foreground">aguardando</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Em Progresso</CardTitle>
+              <Activity className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{inProgressActivities}</div>
+              <p className="text-xs text-muted-foreground">em andamento</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completed}</div>
-              <p className="text-xs text-green-100">
-                Finalizadas com sucesso
-              </p>
+              <div className="text-2xl font-bold">{completedActivities}</div>
+              <p className="text-xs text-muted-foreground">finalizadas</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-r from-gray-500 to-gray-600 text-white border-0 shadow-lg">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Em Espera</CardTitle>
-              <Pause className="h-4 w-4" />
+              <Pause className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.on_hold}</div>
-              <p className="text-xs text-gray-100">
-                Pausadas temporariamente
-              </p>
+              <div className="text-2xl font-bold">{onHoldActivities}</div>
+              <p className="text-xs text-muted-foreground">pausadas</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+        {/* Progresso Geral */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
-                Distribuição por Status
+                Progresso Médio
               </CardTitle>
-              <CardDescription>
-                Visão geral do status das atividades
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  pending: { label: 'Pendentes', color: '#f59e0b' },
-                  in_progress: { label: 'Em Progresso', color: '#3b82f6' },
-                  completed: { label: 'Concluídas', color: '#10b981' },
-                  on_hold: { label: 'Em Espera', color: '#6b7280' },
-                }}
-                className="h-[300px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              <div className="space-y-4">
+                <div className="text-3xl font-bold">{averageProgress.toFixed(1)}%</div>
+                <Progress value={averageProgress} className="w-full" />
+                <p className="text-sm text-muted-foreground">
+                  Progresso médio de todas as atividades
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+          {/* Gráfico de Status */}
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Atividades por Mês
-              </CardTitle>
-              <CardDescription>
-                Progresso mensal de atividades criadas
-              </CardDescription>
+              <CardTitle>Status das Atividades</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  atividades: { label: 'Atividades', color: '#3b82f6' },
-                }}
-                className="h-[300px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="atividades" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Prioridades */}
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Distribuição por Prioridade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={priorityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
 
-        {/* Atividades Recentes */}
-        <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Atividades Recentes
-            </CardTitle>
-            <CardDescription>
-              Últimas 5 atividades criadas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  Nenhuma atividade encontrada
-                </p>
-              ) : (
-                recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      {getStatusIcon(activity.status)}
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {activity.title}
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {getStatusLabel(activity.status)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {activity.progress}%
+        {/* Atividades Recentes e Próximas do Vencimento */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Atividades Recentes */}
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Atividades Recentes</CardTitle>
+              <CardDescription>Últimas atividades criadas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivities.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhuma atividade encontrada
+                  </p>
+                ) : (
+                  recentActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+                      <div className="flex items-center space-x-3">
+                        {getStatusIcon(activity.status)}
+                        <div>
+                          <p className="font-medium truncate max-w-[200px]">{activity.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {getStatusLabel(activity.status)}
+                          </p>
                         </div>
-                        <Progress value={activity.progress} className="w-20" />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge className={getPriorityColor(activity.priority)}>
+                          {activity.priority}
+                        </Badge>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{activity.progress}%</p>
+                          <Progress value={activity.progress} className="w-16 h-2" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Próximas do Vencimento */}
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Próximas do Vencimento</CardTitle>
+              <CardDescription>Atividades que vencem em breve</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {upcomingActivities.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    Nenhuma atividade com vencimento próximo
+                  </p>
+                ) : (
+                  upcomingActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="h-4 w-4 text-orange-500" />
+                        <div>
+                          <p className="font-medium truncate max-w-[200px]">{activity.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Vence em: {new Date(activity.due_date!).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{activity.progress}%</p>
+                        <Progress value={activity.progress} className="w-16 h-2" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Gráfico de Tipos de Atividade */}
+        <div className="mt-8">
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Tipos de Atividades</CardTitle>
+              <CardDescription>Distribuição por tipo de atividade</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={typeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#8b5cf6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
