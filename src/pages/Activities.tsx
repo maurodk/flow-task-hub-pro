@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Calendar, CheckCircle, Clock, Pause, Activity, FileTemplate } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, CheckCircle, Clock, Pause, Activity, File } from 'lucide-react';
 import ActivityTemplateManager from '@/components/ActivityTemplateManager';
 
 interface ActivityData {
@@ -67,10 +68,10 @@ const Activities = () => {
   const [activityForm, setActivityForm] = useState({
     title: '',
     description: '',
-    status: 'pending' as const,
-    priority: 'medium' as const,
+    status: 'pending' as 'pending' | 'in_progress' | 'completed' | 'on_hold',
+    priority: 'medium' as 'low' | 'medium' | 'high',
     due_date: '',
-    activity_type: 'standard' as const,
+    activity_type: 'standard' as 'standard' | 'template_based' | 'recurring',
     is_recurring: false,
     recurrence_type: '',
     recurrence_time: '',
@@ -101,6 +102,9 @@ const Activities = () => {
 
       const formattedActivities = data?.map(activity => ({
         ...activity,
+        status: activity.status as 'pending' | 'in_progress' | 'completed' | 'on_hold',
+        priority: activity.priority as 'low' | 'medium' | 'high',
+        activity_type: activity.activity_type as 'standard' | 'template_based' | 'recurring',
         subtasks: activity.activity_subtasks?.sort((a: any, b: any) => a.order_index - b.order_index) || []
       })) || [];
 
@@ -360,7 +364,7 @@ const Activities = () => {
               Lista de Atividades
             </TabsTrigger>
             <TabsTrigger value="templates" className="dark:data-[state=active]:bg-slate-700">
-              <FileTemplate className="h-4 w-4 mr-2" />
+              <File className="h-4 w-4 mr-2" />
               Templates
             </TabsTrigger>
           </TabsList>
@@ -416,7 +420,7 @@ const Activities = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="status" className="text-gray-700 dark:text-gray-200">Status</Label>
-                        <Select value={activityForm.status} onValueChange={(value) => setActivityForm({ ...activityForm, status: value as any })}>
+                        <Select value={activityForm.status} onValueChange={(value: 'pending' | 'in_progress' | 'completed' | 'on_hold') => setActivityForm({ ...activityForm, status: value })}>
                           <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
@@ -431,7 +435,7 @@ const Activities = () => {
 
                       <div>
                         <Label htmlFor="priority" className="text-gray-700 dark:text-gray-200">Prioridade</Label>
-                        <Select value={activityForm.priority} onValueChange={(value) => setActivityForm({ ...activityForm, priority: value as any })}>
+                        <Select value={activityForm.priority} onValueChange={(value: 'low' | 'medium' | 'high') => setActivityForm({ ...activityForm, priority: value })}>
                           <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
@@ -457,8 +461,8 @@ const Activities = () => {
 
                     <div>
                       <Label htmlFor="activity_type" className="text-gray-700 dark:text-gray-200">Tipo de Atividade</Label>
-                      <Select value={activityForm.activity_type} onValueChange={(value) => {
-                        setActivityForm({ ...activityForm, activity_type: value as any });
+                      <Select value={activityForm.activity_type} onValueChange={(value: 'standard' | 'template_based' | 'recurring') => {
+                        setActivityForm({ ...activityForm, activity_type: value });
                         if (value === 'template_based') {
                           setSubtasks([]);
                         }
@@ -496,7 +500,7 @@ const Activities = () => {
                           <Checkbox
                             id="is_recurring"
                             checked={activityForm.is_recurring}
-                            onCheckedChange={(checked) => setActivityForm({ ...activityForm, is_recurring: checked || false })}
+                            onCheckedChange={(checked) => setActivityForm({ ...activityForm, is_recurring: Boolean(checked) })}
                           />
                           <Label htmlFor="is_recurring" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700 dark:text-gray-200">
                             Atividade Repetitiva
@@ -507,7 +511,7 @@ const Activities = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <Label htmlFor="recurrence_type" className="text-gray-700 dark:text-gray-200">Tipo de Recorrência</Label>
-                              <Select value={activityForm.recurrence_type} onValueChange={(value) => setActivityForm({ ...activityForm, recurrence_type: value as any })}>
+                              <Select value={activityForm.recurrence_type} onValueChange={(value) => setActivityForm({ ...activityForm, recurrence_type: value })}>
                                 <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                   <SelectValue placeholder="Selecione" />
                                 </SelectTrigger>
