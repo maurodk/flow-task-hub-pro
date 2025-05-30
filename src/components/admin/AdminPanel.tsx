@@ -32,33 +32,35 @@ const AdminPanel = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      // Buscar perfis primeiro
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          email,
-          name,
-          created_at,
-          user_roles!inner(role)
-        `);
+        .select('id, email, name, created_at');
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      // Buscar informações completas dos usuários
-      const userPromises = data?.map(async (profile) => {
-        const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
+      // Buscar roles separadamente
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) throw rolesError;
+
+      // Combinar os dados
+      const usersData: User[] = profiles?.map(profile => {
+        const userRoles = roles?.filter(role => role.user_id === profile.id) || [];
+        
         return {
           id: profile.id,
-          email: profile.email || authUser.user?.email || '',
+          email: profile.email || '',
           created_at: profile.created_at,
           profiles: {
             name: profile.name || ''
           },
-          user_roles: profile.user_roles || []
+          user_roles: userRoles.map(role => ({ role: role.role }))
         };
       }) || [];
 
-      const usersData = await Promise.all(userPromises);
       setUsers(usersData);
     } catch (error: any) {
       console.error('Erro ao buscar usuários:', error);
