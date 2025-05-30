@@ -68,34 +68,28 @@ export const useActivities = () => {
     }
   };
 
-  const createRecurringActivity = async (formData: any) => {
+  const createActivity = async (formData: any) => {
     if (!user) return;
 
     try {
-      // Calcular próxima execução
+      // Calcular próxima execução para atividades recorrentes
       let nextDueAt = null;
       if (formData.is_recurring && formData.recurrence_type && formData.recurrence_time) {
         const now = new Date();
-        const [hours, minutes] = formData.recurrence_time.split(':');
+        const recurrenceInterval = parseInt(formData.recurrence_time) || 1;
         
         switch (formData.recurrence_type) {
           case 'daily':
             nextDueAt = new Date(now);
-            nextDueAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            if (nextDueAt <= now) {
-              nextDueAt.setDate(nextDueAt.getDate() + 1);
-            }
+            nextDueAt.setDate(nextDueAt.getDate() + recurrenceInterval);
             break;
           case 'weekly':
             nextDueAt = new Date(now);
-            nextDueAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            nextDueAt.setDate(nextDueAt.getDate() + (7 - nextDueAt.getDay()));
+            nextDueAt.setDate(nextDueAt.getDate() + (7 * recurrenceInterval));
             break;
           case 'monthly':
             nextDueAt = new Date(now);
-            nextDueAt.setMonth(nextDueAt.getMonth() + 1);
-            nextDueAt.setDate(1);
-            nextDueAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            nextDueAt.setMonth(nextDueAt.getMonth() + recurrenceInterval);
             break;
         }
       }
@@ -124,7 +118,7 @@ export const useActivities = () => {
 
       return activity;
     } catch (error: any) {
-      console.error('Erro ao criar atividade recorrente:', error);
+      console.error('Erro ao criar atividade:', error);
       throw error;
     }
   };
@@ -178,6 +172,6 @@ export const useActivities = () => {
     fetchUserTemplates,
     toggleSubtask,
     deleteActivity,
-    createRecurringActivity,
+    createActivity,
   };
 };

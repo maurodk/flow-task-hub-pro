@@ -1,11 +1,49 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Heart, Share2, Calendar, Users } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Mural = () => {
+  const [postLikes, setPostLikes] = useState<{[key: number]: number}>({
+    1: 12,
+    2: 8,
+    3: 25
+  });
+
+  const [postComments, setPostComments] = useState<{[key: number]: number}>({
+    1: 5,
+    2: 3,
+    3: 12
+  });
+
+  const [likedPosts, setLikedPosts] = useState<{[key: number]: boolean}>({});
+
+  const handleLike = (postId: number) => {
+    const isLiked = likedPosts[postId];
+    setLikedPosts(prev => ({
+      ...prev,
+      [postId]: !isLiked
+    }));
+    
+    setPostLikes(prev => ({
+      ...prev,
+      [postId]: isLiked ? prev[postId] - 1 : prev[postId] + 1
+    }));
+
+    toast.success(isLiked ? 'Curtida removida!' : 'Post curtido!');
+  };
+
+  const handleComment = (postId: number) => {
+    toast.info('Funcionalidade de comentários em desenvolvimento');
+  };
+
+  const handleShare = () => {
+    toast.info('Funcionalidade de compartilhamento em desenvolvimento');
+  };
+
   const posts = [
     {
       id: 1,
@@ -14,8 +52,6 @@ const Mural = () => {
       title: 'Nova versão do sistema lançada!',
       content: 'Estamos felizes em anunciar que a nova versão do nosso sistema de gestão está disponível. Confira as novas funcionalidades.',
       timestamp: '2 horas atrás',
-      likes: 12,
-      comments: 5,
       tags: ['Atualização', 'Sistema'],
     },
     {
@@ -25,8 +61,6 @@ const Mural = () => {
       title: 'Reunião de equipe agendada',
       content: 'Lembrando a todos sobre a reunião de alinhamento da equipe que acontecerá na próxima quinta-feira às 14h.',
       timestamp: '5 horas atrás',
-      likes: 8,
-      comments: 3,
       tags: ['Reunião', 'Equipe'],
     },
     {
@@ -36,8 +70,6 @@ const Mural = () => {
       title: 'Dicas de produtividade',
       content: 'Compartilhando algumas técnicas que têm me ajudado a ser mais produtivo no trabalho. Vale a pena conferir!',
       timestamp: '1 dia atrás',
-      likes: 25,
-      comments: 12,
       tags: ['Produtividade', 'Dicas'],
     },
   ];
@@ -103,15 +135,34 @@ const Mural = () => {
 
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-700">
                     <div className="flex items-center space-x-4">
-                      <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400">
-                        <Heart className="h-4 w-4" />
-                        {post.likes}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`flex items-center gap-2 ${
+                          likedPosts[post.id] 
+                            ? 'text-red-500 dark:text-red-400' 
+                            : 'text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400'
+                        }`}
+                        onClick={() => handleLike(post.id)}
+                      >
+                        <Heart className={`h-4 w-4 ${likedPosts[post.id] ? 'fill-current' : ''}`} />
+                        {postLikes[post.id]}
                       </Button>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+                        onClick={() => handleComment(post.id)}
+                      >
                         <MessageSquare className="h-4 w-4" />
-                        {post.comments}
+                        {postComments[post.id]}
                       </Button>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400"
+                        onClick={handleShare}
+                      >
                         <Share2 className="h-4 w-4" />
                         Compartilhar
                       </Button>

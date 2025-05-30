@@ -17,6 +17,7 @@ interface ActivityFormProps {
   userTemplates: UserTemplate[];
   onSuccess: () => void;
   onClose: () => void;
+  createActivity: (formData: any) => Promise<any>;
 }
 
 const ActivityForm: React.FC<ActivityFormProps> = ({
@@ -24,6 +25,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
   userTemplates,
   onSuccess,
   onClose,
+  createActivity,
 }) => {
   const { user } = useAuth();
   const [activityForm, setActivityForm] = useState<ActivityFormData>({
@@ -105,7 +107,6 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       let activityId: string;
 
       const activityData = {
-        user_id: user.id,
         title: activityForm.title,
         description: activityForm.description || null,
         status: activityForm.status,
@@ -116,7 +117,6 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         recurrence_type: activityForm.is_recurring ? activityForm.recurrence_type || null : null,
         recurrence_time: activityForm.is_recurring ? activityForm.recurrence_time || null : null,
         template_id: activityForm.activity_type === 'template_based' ? activityForm.template_id || null : null,
-        progress: 0,
       };
 
       if (editingActivity) {
@@ -124,6 +124,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           .from('activities')
           .update({
             ...activityData,
+            user_id: user.id,
+            progress: editingActivity.progress,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingActivity.id);
@@ -136,14 +138,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           .delete()
           .eq('activity_id', activityId);
       } else {
-        const { data, error } = await supabase
-          .from('activities')
-          .insert(activityData)
-          .select()
-          .single();
-
-        if (error) throw error;
-        activityId = data.id;
+        const activity = await createActivity(activityData);
+        activityId = activity.id;
       }
 
       if (subtasks.length > 0) {
@@ -171,7 +167,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
   };
 
   return (
-    <DialogContent className="max-w-2xl bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
       <DialogHeader>
         <DialogTitle className="text-gray-900 dark:text-white">
           {editingActivity ? 'Editar Atividade' : 'Nova Atividade'}
@@ -181,7 +177,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+      <div className="space-y-6 p-4">
         <div>
           <Label htmlFor="title" className="text-gray-700 dark:text-gray-200">Título</Label>
           <Input
@@ -250,8 +246,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           <Label htmlFor="activity_type" className="text-gray-700 dark:text-gray-200">Tipo de Atividade</Label>
           <Select value={activityForm.activity_type} onValueChange={(value: 'standard' | 'template_based' | 'recurring') => {
             setActivityForm({ ...activityForm, activity_type: value });
-            if (value === 'template_based') {
-              setSubtasks([]);
+            if (value !== 'template_based') {
+              setActivityForm(prev => ({ ...prev, template_id: '' }));
+            }
+            if (value !== 'recurring') {
+              setActivityForm(prev => ({ ...prev, is_recurring: false, recurrence_type: '', recurrence_time: '' }));
             }
           }}>
             <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
@@ -311,13 +310,14 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="recurrence_time" className="text-gray-700 dark:text-gray-200">Frequência</Label>
+                  <Label htmlFor="recurrence_time" className="text-gray-700 dark:text-gray-200">Intervalo (dias/semanas/meses)</Label>
                   <Input
                     type="number"
                     id="recurrence_time"
                     value={activityForm.recurrence_time}
                     onChange={(e) => setActivityForm({ ...activityForm, recurrence_time: e.target.value })}
-                    placeholder="Ex: 1 (a cada dia/semana/mês)"
+                    placeholder="Ex: 1"
+                    min="1"
                     className="dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                   />
                 </div>
@@ -341,11 +341,27 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
                 placeholder={`Subtarefa ${index + 1}`}
                 className="flex-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newSubtasks = subtasks.filter((_, i) => i !== index);
+                  setSubtasks(newSubtasks);
+                }}
+              >
+                Remover
+              </Button>
             </div>
           ))}
         </div>
 
-        <Button type="button" variant="outline" onClick={() => setSubtasks([...subtasks, { title: '', description: '', is_completed: false, order_index: subtasks.length }])} className="w-full dark:border-slate-600 dark:text-slate-200">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => setSubtasks([...subtasks, { title: '', description: '', is_completed: false, order_index: subtasks.length }])} 
+          className="w-full dark:border-slate-600 dark:text-slate-200"
+        >
           Adicionar Subtarefa
         </Button>
 
