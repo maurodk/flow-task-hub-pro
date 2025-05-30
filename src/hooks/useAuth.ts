@@ -9,35 +9,86 @@ export const useUserRole = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const checkUserRole = async () => {
+    if (!user) {
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.error('Erro ao verificar role do usuário:', error);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initializeFirstAdmin = async () => {
+    if (!user) return { success: false, error: 'Usuário não encontrado' };
+
+    try {
+      console.log('Verificando se existem admins no sistema...');
+      
+      // Verificar se já existem admins
+      const { data: existingAdmins, error: checkError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('role', 'admin')
+        .limit(1);
+
+      if (checkError) {
+        console.error('Erro ao verificar admins existentes:', checkError);
+        throw checkError;
+      }
+
+      // Se já existem admins, não fazer nada
+      if (existingAdmins && existingAdmins.length > 0) {
+        console.log('Já existem administradores no sistema');
+        return { success: false, error: 'Já existem administradores no sistema' };
+      }
+
+      console.log('Nenhum admin encontrado, promovendo usuário atual para admin...');
+      
+      // Se não existem admins, tornar o usuário atual admin
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: user.id,
+          role: 'admin'
+        });
+
+      if (insertError) {
+        console.error('Erro ao inserir role de admin:', insertError);
+        throw insertError;
+      }
+
+      console.log('Usuário promovido para admin com sucesso!');
+      
+      // Atualizar o estado local
+      await checkUserRole();
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao inicializar primeiro admin:', error);
+      return { success: false, error };
+    }
+  };
+
   useEffect(() => {
-    const checkUserRole = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-
-        setIsAdmin(!!data);
-      } catch (error) {
-        console.error('Erro ao verificar role do usuário:', error);
-        setIsAdmin(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     checkUserRole();
   }, [user]);
 
@@ -79,5 +130,7 @@ export const useUserRole = () => {
     loading,
     makeUserAdmin,
     removeAdminRole,
+    initializeFirstAdmin,
+    checkUserRole,
   };
 };
