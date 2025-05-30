@@ -1,17 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { User, Mail, Save, Camera, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Save, Camera, Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import AdminPanel from '@/components/admin/AdminPanel';
 
 const Profile = () => {
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -34,6 +37,36 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    // Definir usuário atual como admin inicial se for o primeiro admin
+    const initializeAdmin = async () => {
+      if (user && !roleLoading) {
+        try {
+          // Verificar se já existem admins
+          const { data: existingAdmins } = await supabase
+            .from('user_roles')
+            .select('id')
+            .eq('role', 'admin')
+            .limit(1);
+
+          // Se não existem admins, tornar o usuário atual admin
+          if (!existingAdmins || existingAdmins.length === 0) {
+            await supabase
+              .from('user_roles')
+              .insert({
+                user_id: user.id,
+                role: 'admin'
+              });
+          }
+        } catch (error) {
+          console.error('Erro ao inicializar admin:', error);
+        }
+      }
+    };
+
+    initializeAdmin();
+  }, [user, roleLoading]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -218,240 +251,262 @@ const Profile = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Avatar e informações básicas */}
-          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-gray-900 dark:text-white">Foto do Perfil</CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300">
-                Sua foto de perfil será exibida em todo o sistema.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center space-y-4">
-              <Avatar className="h-24 w-24">
-                {profile.avatar_url ? (
-                  <AvatarImage src={profile.avatar_url} alt="Avatar" />
-                ) : (
-                  <AvatarFallback className="text-2xl bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="flex flex-col items-center space-y-2">
-                <Label htmlFor="avatar-upload" className="cursor-pointer">
-                  <Button 
-                    variant="outline" 
-                    disabled={uploadingAvatar}
-                    className="flex items-center gap-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
-                    asChild
-                  >
-                    <span>
-                      <Camera className="h-4 w-4" />
-                      {uploadingAvatar ? 'Enviando...' : 'Alterar Foto'}
-                    </span>
-                  </Button>
-                </Label>
-                <Input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  JPEG, PNG, WebP ou GIF até 5MB
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 dark:bg-slate-800">
+            <TabsTrigger value="profile" className="dark:data-[state=active]:bg-slate-700">
+              Informações Pessoais
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="admin" className="dark:data-[state=active]:bg-slate-700">
+                <Shield className="h-4 w-4 mr-2" />
+                Gerenciar Acessos
+              </TabsTrigger>
+            )}
+          </TabsList>
 
-          {/* Formulário de perfil */}
-          <Card className="lg:col-span-2 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-gray-900 dark:text-white">Informações Pessoais</CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300">
-                Atualize suas informações pessoais aqui.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-gray-700 dark:text-gray-200">Nome Completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+          <TabsContent value="profile" className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Avatar e informações básicas */}
+              <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 dark:text-white">Foto do Perfil</CardTitle>
+                  <CardDescription className="text-gray-600 dark:text-gray-300">
+                    Sua foto de perfil será exibida em todo o sistema.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center space-y-4">
+                  <Avatar className="h-24 w-24">
+                    {profile.avatar_url ? (
+                      <AvatarImage src={profile.avatar_url} alt="Avatar" />
+                    ) : (
+                      <AvatarFallback className="text-2xl bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="flex flex-col items-center space-y-2">
+                    <Label htmlFor="avatar-upload" className="cursor-pointer">
+                      <Button 
+                        variant="outline" 
+                        disabled={uploadingAvatar}
+                        className="flex items-center gap-2 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                        asChild
+                      >
+                        <span>
+                          <Camera className="h-4 w-4" />
+                          {uploadingAvatar ? 'Enviando...' : 'Alterar Foto'}
+                        </span>
+                      </Button>
+                    </Label>
                     <Input
-                      id="name"
-                      type="text"
-                      placeholder="Digite seu nome completo"
-                      value={profile.name}
-                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                      className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
                     />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                      JPEG, PNG, WebP ou GIF até 5MB
+                    </p>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-700 dark:text-gray-200">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Digite seu email"
-                      value={profile.email}
-                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
-                      disabled
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    O email não pode ser alterado por questões de segurança.
-                  </p>
-                </div>
+              {/* Formulário de perfil */}
+              <Card className="lg:col-span-2 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 dark:text-white">Informações Pessoais</CardTitle>
+                  <CardDescription className="text-gray-600 dark:text-gray-300">
+                    Atualize suas informações pessoais aqui.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-gray-700 dark:text-gray-200">Nome Completo</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <Input
+                          id="name"
+                          type="text"
+                          placeholder="Digite seu nome completo"
+                          value={profile.name}
+                          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                          className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                        />
+                      </div>
+                    </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={loading} className="flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    {loading ? 'Salvando...' : 'Salvar Alterações'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-700 dark:text-gray-200">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="Digite seu email"
+                          value={profile.email}
+                          onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                          className="pl-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                          disabled
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        O email não pode ser alterado por questões de segurança.
+                      </p>
+                    </div>
 
-        {/* Alteração de Senha */}
-        <Card className="mt-8 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Alterar Senha
-            </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-300">
-              Altere sua senha de acesso ao sistema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword" className="text-gray-700 dark:text-gray-200">Senha Atual</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <Input
-                    id="currentPassword"
-                    type={showCurrentPassword ? "text" : "password"}
-                    placeholder="Digite sua senha atual"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    className="pl-10 pr-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword" className="text-gray-700 dark:text-gray-200">Nova Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <Input
-                    id="newPassword"
-                    type={showNewPassword ? "text" : "password"}
-                    placeholder="Digite sua nova senha"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    className="pl-10 pr-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-gray-200">Confirmar Nova Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirme sua nova senha"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    className="pl-10 pr-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" disabled={changingPassword} className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  {changingPassword ? 'Alterando...' : 'Alterar Senha'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Informações da conta */}
-        <Card className="mt-8 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Informações da Conta</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-300">
-              Detalhes sobre sua conta no sistema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">ID do Usuário</Label>
-                <p className="text-sm font-mono bg-gray-100 dark:bg-slate-700 p-2 rounded mt-1 text-gray-900 dark:text-gray-100">
-                  {user?.id}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Data de Cadastro</Label>
-                <p className="text-sm mt-1 text-gray-700 dark:text-gray-200">
-                  {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
-                </p>
-              </div>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={loading} className="flex items-center gap-2">
+                        <Save className="h-4 w-4" />
+                        {loading ? 'Salvando...' : 'Salvar Alterações'}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Alteração de Senha */}
+            <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Alterar Senha
+                </CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-300">
+                  Altere sua senha de acesso ao sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordChange} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword" className="text-gray-700 dark:text-gray-200">Senha Atual</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        placeholder="Digite sua senha atual"
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                        className="pl-10 pr-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-gray-700 dark:text-gray-200">Nova Senha</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="Digite sua nova senha"
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        className="pl-10 pr-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-gray-200">Confirmar Nova Senha</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirme sua nova senha"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        className="pl-10 pr-10 dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:placeholder-gray-400"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={changingPassword} className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      {changingPassword ? 'Alterando...' : 'Alterar Senha'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Informações da conta */}
+            <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white">Informações da Conta</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-300">
+                  Detalhes sobre sua conta no sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">ID do Usuário</Label>
+                    <p className="text-sm font-mono bg-gray-100 dark:bg-slate-700 p-2 rounded mt-1 text-gray-900 dark:text-gray-100">
+                      {user?.id}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Data de Cadastro</Label>
+                    <p className="text-sm mt-1 text-gray-700 dark:text-gray-200">
+                      {user?.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="admin">
+              <AdminPanel />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   );

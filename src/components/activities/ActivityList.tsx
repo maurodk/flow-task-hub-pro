@@ -43,7 +43,9 @@ const ActivityList: React.FC<ActivityListProps> = ({
               Nova Atividade
             </Button>
           </DialogTrigger>
-          {children}
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            {children}
+          </DialogContent>
         </Dialog>
       </div>
 

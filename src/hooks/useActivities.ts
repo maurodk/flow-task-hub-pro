@@ -68,6 +68,67 @@ export const useActivities = () => {
     }
   };
 
+  const createRecurringActivity = async (formData: any) => {
+    if (!user) return;
+
+    try {
+      // Calcular próxima execução
+      let nextDueAt = null;
+      if (formData.is_recurring && formData.recurrence_type && formData.recurrence_time) {
+        const now = new Date();
+        const [hours, minutes] = formData.recurrence_time.split(':');
+        
+        switch (formData.recurrence_type) {
+          case 'daily':
+            nextDueAt = new Date(now);
+            nextDueAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            if (nextDueAt <= now) {
+              nextDueAt.setDate(nextDueAt.getDate() + 1);
+            }
+            break;
+          case 'weekly':
+            nextDueAt = new Date(now);
+            nextDueAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            nextDueAt.setDate(nextDueAt.getDate() + (7 - nextDueAt.getDay()));
+            break;
+          case 'monthly':
+            nextDueAt = new Date(now);
+            nextDueAt.setMonth(nextDueAt.getMonth() + 1);
+            nextDueAt.setDate(1);
+            nextDueAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            break;
+        }
+      }
+
+      const { data: activity, error } = await supabase
+        .from('activities')
+        .insert({
+          title: formData.title,
+          description: formData.description || null,
+          status: formData.status,
+          priority: formData.priority,
+          due_date: formData.due_date || null,
+          activity_type: formData.activity_type,
+          is_recurring: formData.is_recurring,
+          recurrence_type: formData.recurrence_type || null,
+          recurrence_time: formData.recurrence_time || null,
+          template_id: formData.template_id || null,
+          next_due_at: nextDueAt?.toISOString() || null,
+          user_id: user.id,
+          progress: 0
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return activity;
+    } catch (error: any) {
+      console.error('Erro ao criar atividade recorrente:', error);
+      throw error;
+    }
+  };
+
   const toggleSubtask = async (activityId: string, subtaskId: string, isCompleted: boolean) => {
     try {
       const { error } = await supabase
@@ -117,5 +178,6 @@ export const useActivities = () => {
     fetchUserTemplates,
     toggleSubtask,
     deleteActivity,
+    createRecurringActivity,
   };
 };

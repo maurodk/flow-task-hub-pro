@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { File } from 'lucide-react';
 import { ActivityData } from '@/types/activity';
 import { useActivities } from '@/hooks/useActivities';
@@ -15,6 +15,7 @@ const Activities = () => {
     userTemplates,
     loading,
     fetchActivities,
+    fetchUserTemplates,
     toggleSubtask,
     deleteActivity,
   } = useActivities();
@@ -37,6 +38,7 @@ const Activities = () => {
     setIsDialogOpen(false);
     setEditingActivity(null);
     fetchActivities();
+    fetchUserTemplates();
   };
 
   const handleCloseDialog = () => {
@@ -96,6 +98,11 @@ const Activities = () => {
           </TabsContent>
 
           <TabsContent value="templates">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <ActivityTemplateManager />
+              </DialogContent>
+            </Dialog>
             <ActivityTemplateManager />
           </TabsContent>
         </Tabs>

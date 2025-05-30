@@ -50,3 +50,10 @@ export interface ActivityFormData {
   recurrence_time: string;
   template_id: string;
 }
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+}
