@@ -41,14 +41,11 @@ export const useUserRole = () => {
     if (!user) return { success: false, error: 'Usuário não encontrado' };
 
     try {
-      console.log('Verificando se existem admins no sistema...');
+      console.log('Tentando promover usuário para primeiro admin...');
       
-      // Verificar se já existem admins
-      const { data: existingAdmins, error: checkError } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1);
+      // Usar a nova função do banco para verificar se existem admins
+      const { data: hasAdmins, error: checkError } = await supabase
+        .rpc('has_any_admin');
 
       if (checkError) {
         console.error('Erro ao verificar admins existentes:', checkError);
@@ -56,7 +53,7 @@ export const useUserRole = () => {
       }
 
       // Se já existem admins, não fazer nada
-      if (existingAdmins && existingAdmins.length > 0) {
+      if (hasAdmins) {
         console.log('Já existem administradores no sistema');
         return { success: false, error: 'Já existem administradores no sistema' };
       }
