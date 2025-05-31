@@ -38,12 +38,16 @@ export const useUserRole = () => {
   };
 
   const initializeFirstAdmin = async () => {
-    if (!user) return { success: false, error: 'Usuário não encontrado' };
+    if (!user) {
+      console.error('Usuário não encontrado');
+      return { success: false, error: 'Usuário não encontrado' };
+    }
 
     try {
       console.log('Tentando promover usuário para primeiro admin...');
+      console.log('ID do usuário:', user.id);
       
-      // Usar a nova função do banco para verificar se existem admins
+      // Verificar se já existem admins usando a função do banco
       const { data: hasAdmins, error: checkError } = await supabase
         .rpc('has_any_admin');
 
@@ -51,6 +55,8 @@ export const useUserRole = () => {
         console.error('Erro ao verificar admins existentes:', checkError);
         throw checkError;
       }
+
+      console.log('Existem admins no sistema?', hasAdmins);
 
       // Se já existem admins, não fazer nada
       if (hasAdmins) {
@@ -61,27 +67,37 @@ export const useUserRole = () => {
       console.log('Nenhum admin encontrado, promovendo usuário atual para admin...');
       
       // Se não existem admins, tornar o usuário atual admin
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('user_roles')
         .insert({
           user_id: user.id,
           role: 'admin'
-        });
+        })
+        .select();
 
       if (insertError) {
         console.error('Erro ao inserir role de admin:', insertError);
+        
+        // Se o erro for de violação de RLS, mostrar uma mensagem mais específica
+        if (insertError.code === '42501' || insertError.message?.includes('policy')) {
+          throw new Error('Erro de permissão. Verifique as políticas RLS da tabela user_roles.');
+        }
+        
         throw insertError;
       }
 
-      console.log('Usuário promovido para admin com sucesso!');
+      console.log('Usuário promovido para admin com sucesso!', insertData);
       
       // Atualizar o estado local
       await checkUserRole();
       
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao inicializar primeiro admin:', error);
-      return { success: false, error };
+      return { 
+        success: false, 
+        error: error.message || 'Erro desconhecido ao promover usuário'
+      };
     }
   };
 
