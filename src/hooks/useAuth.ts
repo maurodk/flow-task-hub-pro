@@ -47,26 +47,7 @@ export const useUserRole = () => {
       console.log('Tentando promover usuário para primeiro admin...');
       console.log('ID do usuário:', user.id);
       
-      // Verificar se já existem admins usando a função do banco
-      const { data: hasAdmins, error: checkError } = await supabase
-        .rpc('has_any_admin');
-
-      if (checkError) {
-        console.error('Erro ao verificar admins existentes:', checkError);
-        throw checkError;
-      }
-
-      console.log('Existem admins no sistema?', hasAdmins);
-
-      // Se já existem admins, não fazer nada
-      if (hasAdmins) {
-        console.log('Já existem administradores no sistema');
-        return { success: false, error: 'Já existem administradores no sistema' };
-      }
-
-      console.log('Nenhum admin encontrado, promovendo usuário atual para admin...');
-      
-      // Se não existem admins, tornar o usuário atual admin
+      // Tentar inserir diretamente - as políticas RLS cuidarão da validação
       const { data: insertData, error: insertError } = await supabase
         .from('user_roles')
         .insert({
@@ -78,9 +59,13 @@ export const useUserRole = () => {
       if (insertError) {
         console.error('Erro ao inserir role de admin:', insertError);
         
-        // Se o erro for de violação de RLS, mostrar uma mensagem mais específica
+        // Se o erro for de violação de RLS mas com código específico, pode ser que já existe admin
+        if (insertError.code === '23505') {
+          return { success: false, error: 'Usuário já é administrador' };
+        }
+        
         if (insertError.code === '42501' || insertError.message?.includes('policy')) {
-          throw new Error('Erro de permissão. Verifique as políticas RLS da tabela user_roles.');
+          return { success: false, error: 'Já existem administradores no sistema ou erro de permissão' };
         }
         
         throw insertError;
