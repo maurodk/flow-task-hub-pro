@@ -68,6 +68,26 @@ export const useActivities = () => {
     }
   };
 
+  const calculateNextDueDate = (recurrenceType: string, recurrenceTime: string): Date => {
+    const now = new Date();
+    const nextDue = new Date(now);
+    const interval = parseInt(recurrenceTime) || 1;
+    
+    switch (recurrenceType) {
+      case 'daily':
+        nextDue.setDate(nextDue.getDate() + interval);
+        break;
+      case 'weekly':
+        nextDue.setDate(nextDue.getDate() + (7 * interval));
+        break;
+      case 'monthly':
+        nextDue.setMonth(nextDue.getMonth() + interval);
+        break;
+    }
+    
+    return nextDue;
+  };
+
   const createActivity = async (formData: any) => {
     if (!user) return;
 
@@ -75,23 +95,7 @@ export const useActivities = () => {
       // Calcular próxima execução para atividades recorrentes
       let nextDueAt = null;
       if (formData.is_recurring && formData.recurrence_type && formData.recurrence_time) {
-        const now = new Date();
-        const recurrenceInterval = parseInt(formData.recurrence_time) || 1;
-        
-        switch (formData.recurrence_type) {
-          case 'daily':
-            nextDueAt = new Date(now);
-            nextDueAt.setDate(nextDueAt.getDate() + recurrenceInterval);
-            break;
-          case 'weekly':
-            nextDueAt = new Date(now);
-            nextDueAt.setDate(nextDueAt.getDate() + (7 * recurrenceInterval));
-            break;
-          case 'monthly':
-            nextDueAt = new Date(now);
-            nextDueAt.setMonth(nextDueAt.getMonth() + recurrenceInterval);
-            break;
-        }
+        nextDueAt = calculateNextDueDate(formData.recurrence_type, formData.recurrence_time);
       }
 
       const { data: activity, error } = await supabase

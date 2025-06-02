@@ -11,6 +11,7 @@ import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/c
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { ActivityData, ActivityFormData, UserTemplate, SubtaskData } from '@/types/activity';
+import { DatePicker } from './DatePicker';
 
 interface ActivityFormProps {
   editingActivity: ActivityData | null;
@@ -42,6 +43,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
   });
 
   const [subtasks, setSubtasks] = useState<Omit<SubtaskData, 'id'>[]>([]);
+  const [dueDate, setDueDate] = useState<Date | undefined>();
 
   useEffect(() => {
     if (editingActivity) {
@@ -57,6 +59,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         recurrence_time: editingActivity.recurrence_time || '',
         template_id: editingActivity.template_id || '',
       });
+      
+      if (editingActivity.due_date) {
+        setDueDate(new Date(editingActivity.due_date));
+      }
+      
       setSubtasks(editingActivity.subtasks?.map(st => ({
         title: st.title,
         description: st.description,
@@ -82,6 +89,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       template_id: '',
     });
     setSubtasks([]);
+    setDueDate(undefined);
   };
 
   const handleTemplateSelect = (templateId: string) => {
@@ -97,6 +105,25 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
     })));
   };
 
+  const calculateNextDueDate = (recurrenceType: string, recurrenceInterval: number): Date => {
+    const now = new Date();
+    const nextDue = new Date(now);
+    
+    switch (recurrenceType) {
+      case 'daily':
+        nextDue.setDate(nextDue.getDate() + recurrenceInterval);
+        break;
+      case 'weekly':
+        nextDue.setDate(nextDue.getDate() + (7 * recurrenceInterval));
+        break;
+      case 'monthly':
+        nextDue.setMonth(nextDue.getMonth() + recurrenceInterval);
+        break;
+    }
+    
+    return nextDue;
+  };
+
   const handleSaveActivity = async () => {
     if (!user || !activityForm.title.trim()) {
       toast.error('Título da atividade é obrigatório');
@@ -105,18 +132,26 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
 
     try {
       let activityId: string;
+      let nextDueAt = null;
+
+      // Se é uma atividade recorrente, calcular a próxima data baseada na data atual
+      if (activityForm.is_recurring && activityForm.recurrence_type && activityForm.recurrence_time) {
+        const interval = parseInt(activityForm.recurrence_time) || 1;
+        nextDueAt = calculateNextDueDate(activityForm.recurrence_type, interval);
+      }
 
       const activityData = {
         title: activityForm.title,
         description: activityForm.description || null,
         status: activityForm.status,
         priority: activityForm.priority,
-        due_date: activityForm.due_date || null,
+        due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
         activity_type: activityForm.activity_type,
         is_recurring: activityForm.is_recurring,
         recurrence_type: activityForm.is_recurring ? activityForm.recurrence_type || null : null,
         recurrence_time: activityForm.is_recurring ? activityForm.recurrence_time || null : null,
         template_id: activityForm.activity_type === 'template_based' ? activityForm.template_id || null : null,
+        next_due_at: nextDueAt?.toISOString() || null,
       };
 
       if (editingActivity) {
@@ -233,11 +268,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
 
         <div>
           <Label htmlFor="due_date" className="text-gray-700 dark:text-gray-200">Data de Vencimento</Label>
-          <Input
-            type="date"
-            id="due_date"
-            value={activityForm.due_date}
-            onChange={(e) => setActivityForm({ ...activityForm, due_date: e.target.value })}
+          <DatePicker
+            date={dueDate}
+            onDateChange={setDueDate}
+            placeholder="Selecione a data de vencimento"
             className="dark:bg-slate-700 dark:border-slate-600 dark:text-white"
           />
         </div>
@@ -296,10 +330,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             {activityForm.is_recurring && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="recurrence_type" className="text-gray-700 dark:text-gray-200">Tipo de Recorrência</Label>
+                  <Label htmlFor="recurrence_type" className="text-gray-700 dark:text-gray-200">Frequência</Label>
                   <Select value={activityForm.recurrence_type} onValueChange={(value) => setActivityForm({ ...activityForm, recurrence_type: value })}>
                     <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                      <SelectValue placeholder="Selecione" />
+                      <SelectValue placeholder="Selecione a frequência" />
                     </SelectTrigger>
                     <SelectContent className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                       <SelectItem value="daily">Diária</SelectItem>
@@ -310,7 +344,9 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="recurrence_time" className="text-gray-700 dark:text-gray-200">Intervalo (dias/semanas/meses)</Label>
+                  <Label htmlFor="recurrence_time" className="text-gray-700 dark:text-gray-200">
+                    Intervalo ({activityForm.recurrence_type === 'daily' ? 'dias' : activityForm.recurrence_type === 'weekly' ? 'semanas' : 'meses'})
+                  </Label>
                   <Input
                     type="number"
                     id="recurrence_time"
