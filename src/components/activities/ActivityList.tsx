@@ -15,6 +15,7 @@ interface ActivityListProps {
   isDialogOpen: boolean;
   setIsDialogOpen: (open: boolean) => void;
   children: React.ReactNode;
+  title?: string;
 }
 
 const ActivityList: React.FC<ActivityListProps> = ({
@@ -26,13 +27,14 @@ const ActivityList: React.FC<ActivityListProps> = ({
   isDialogOpen,
   setIsDialogOpen,
   children,
+  title = "Minhas Atividades",
 }) => {
   return (
     <>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Minhas Atividades ({activities.length})
+            {title} ({activities.length})
           </h2>
         </div>
         
@@ -47,17 +49,17 @@ const ActivityList: React.FC<ActivityListProps> = ({
         </Dialog>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 mt-6">
         {activities.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Nenhuma atividade encontrada.
+              Nenhuma atividade encontrada nesta categoria.
             </p>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={onCreateNew}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeira Atividade
+                  Criar Nova Atividade
                 </Button>
               </DialogTrigger>
             </Dialog>
