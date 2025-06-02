@@ -1,78 +1,30 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Heart, Share2, Calendar, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMural } from '@/hooks/useMural';
+import CreatePostForm from '@/components/mural/CreatePostForm';
+import CommentSection from '@/components/mural/CommentSection';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Mural = () => {
-  const [postLikes, setPostLikes] = useState<{[key: number]: number}>({
-    1: 12,
-    2: 8,
-    3: 25
-  });
-
-  const [postComments, setPostComments] = useState<{[key: number]: number}>({
-    1: 5,
-    2: 3,
-    3: 12
-  });
-
-  const [likedPosts, setLikedPosts] = useState<{[key: number]: boolean}>({});
-
-  const handleLike = (postId: number) => {
-    const isLiked = likedPosts[postId];
-    setLikedPosts(prev => ({
-      ...prev,
-      [postId]: !isLiked
-    }));
-    
-    setPostLikes(prev => ({
-      ...prev,
-      [postId]: isLiked ? prev[postId] - 1 : prev[postId] + 1
-    }));
-
-    toast.success(isLiked ? 'Curtida removida!' : 'Post curtido!');
-  };
-
-  const handleComment = (postId: number) => {
-    toast.info('Funcionalidade de comentários em desenvolvimento');
-  };
+  const {
+    posts,
+    comments,
+    loading,
+    createPost,
+    createComment,
+    toggleLike,
+    fetchComments
+  } = useMural();
 
   const handleShare = () => {
     toast.info('Funcionalidade de compartilhamento em desenvolvimento');
   };
-
-  const posts = [
-    {
-      id: 1,
-      author: 'João Silva',
-      avatar: 'JS',
-      title: 'Nova versão do sistema lançada!',
-      content: 'Estamos felizes em anunciar que a nova versão do nosso sistema de gestão está disponível. Confira as novas funcionalidades.',
-      timestamp: '2 horas atrás',
-      tags: ['Atualização', 'Sistema'],
-    },
-    {
-      id: 2,
-      author: 'Maria Santos',
-      avatar: 'MS',
-      title: 'Reunião de equipe agendada',
-      content: 'Lembrando a todos sobre a reunião de alinhamento da equipe que acontecerá na próxima quinta-feira às 14h.',
-      timestamp: '5 horas atrás',
-      tags: ['Reunião', 'Equipe'],
-    },
-    {
-      id: 3,
-      author: 'Carlos Oliveira',
-      avatar: 'CO',
-      title: 'Dicas de produtividade',
-      content: 'Compartilhando algumas técnicas que têm me ajudado a ser mais produtivo no trabalho. Vale a pena conferir!',
-      timestamp: '1 dia atrás',
-      tags: ['Produtividade', 'Dicas'],
-    },
-  ];
 
   const events = [
     {
@@ -91,6 +43,19 @@ const Mural = () => {
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300">Carregando posts...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -104,73 +69,103 @@ const Mural = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Posts principais */}
           <div className="lg:col-span-3 space-y-6">
-            {posts.map((post) => (
-              <Card key={post.id} className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-                <CardHeader>
-                  <div className="flex items-start space-x-4">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
-                      {post.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">{post.author}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{post.timestamp}</p>
-                        </div>
-                      </div>
-                      <CardTitle className="mt-2 text-gray-900 dark:text-white">{post.title}</CardTitle>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700 dark:text-gray-300 mb-4">{post.content}</p>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {post.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="dark:bg-slate-700 dark:text-slate-200">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+            <CreatePostForm onSubmit={createPost} />
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-700">
-                    <div className="flex items-center space-x-4">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className={`flex items-center gap-2 ${
-                          likedPosts[post.id] 
-                            ? 'text-red-500 dark:text-red-400' 
-                            : 'text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400'
-                        }`}
-                        onClick={() => handleLike(post.id)}
-                      >
-                        <Heart className={`h-4 w-4 ${likedPosts[post.id] ? 'fill-current' : ''}`} />
-                        {postLikes[post.id]}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
-                        onClick={() => handleComment(post.id)}
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                        {postComments[post.id]}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400"
-                        onClick={handleShare}
-                      >
-                        <Share2 className="h-4 w-4" />
-                        Compartilhar
-                      </Button>
-                    </div>
-                  </div>
+            {posts.length === 0 ? (
+              <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+                <CardContent className="p-8 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Nenhum post encontrado. Seja o primeiro a publicar!
+                  </p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              posts.map((post) => (
+                <Card key={post.id} className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+                  <CardHeader>
+                    <div className="flex items-start space-x-4">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
+                        {post.author_name?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                              {post.author_name || 'Usuário'}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {formatDistanceToNow(new Date(post.created_at), {
+                                addSuffix: true,
+                                locale: ptBR
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <CardTitle className="mt-2 text-gray-900 dark:text-white">
+                          {post.title}
+                        </CardTitle>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-700 dark:text-gray-300 mb-4">{post.content}</p>
+                    
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {post.tags.map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="dark:bg-slate-700 dark:text-slate-200">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-700">
+                      <div className="flex items-center space-x-4">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={`flex items-center gap-2 ${
+                            post.is_liked 
+                              ? 'text-red-500 dark:text-red-400' 
+                              : 'text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400'
+                          }`}
+                          onClick={() => toggleLike(post.id)}
+                        >
+                          <Heart className={`h-4 w-4 ${post.is_liked ? 'fill-current' : ''}`} />
+                          {post.likes_count}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400"
+                          onClick={() => fetchComments(post.id)}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {post.comments_count}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400"
+                          onClick={handleShare}
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Compartilhar
+                        </Button>
+                      </div>
+                    </div>
+
+                    <CommentSection
+                      postId={post.id}
+                      comments={comments[post.id] || []}
+                      onAddComment={createComment}
+                      onLoadComments={fetchComments}
+                    />
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           {/* Sidebar */}
