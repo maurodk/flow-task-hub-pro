@@ -3,15 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { ActivityData, ActivityFormData, UserTemplate, SubtaskData } from '@/types/activity';
 import { DatePicker } from './DatePicker';
+import { BasicInfoForm } from './forms/BasicInfoForm';
+import { StatusPriorityForm } from './forms/StatusPriorityForm';
+import { ActivityTypeForm } from './forms/ActivityTypeForm';
+import { RecurringForm } from './forms/RecurringForm';
+import { SubtasksForm } from './forms/SubtasksForm';
 
 interface ActivityFormProps {
   editingActivity: ActivityData | null;
@@ -92,11 +93,15 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
     setDueDate(undefined);
   };
 
+  const handleFormChange = (updates: Partial<ActivityFormData>) => {
+    setActivityForm(prev => ({ ...prev, ...updates }));
+  };
+
   const handleTemplateSelect = (templateId: string) => {
     const template = userTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    setActivityForm(prev => ({ ...prev, template_id: templateId }));
+    handleFormChange({ template_id: templateId });
     setSubtasks(template.subtasks.map(st => ({
       title: st.title,
       description: st.description,
@@ -105,19 +110,19 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
     })));
   };
 
-  const calculateNextDueDate = (recurrenceType: string, recurrenceInterval: number): Date => {
+  const calculateNextDueDate = (recurrenceType: string): Date => {
     const now = new Date();
     const nextDue = new Date(now);
     
     switch (recurrenceType) {
       case 'daily':
-        nextDue.setDate(nextDue.getDate() + recurrenceInterval);
+        nextDue.setDate(nextDue.getDate() + 1);
         break;
       case 'weekly':
-        nextDue.setDate(nextDue.getDate() + (7 * recurrenceInterval));
+        nextDue.setDate(nextDue.getDate() + 7);
         break;
       case 'monthly':
-        nextDue.setMonth(nextDue.getMonth() + recurrenceInterval);
+        nextDue.setMonth(nextDue.getMonth() + 1);
         break;
     }
     
@@ -134,10 +139,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       let activityId: string;
       let nextDueAt = null;
 
-      // Se é uma atividade recorrente, calcular a próxima data baseada na data atual
-      if (activityForm.is_recurring && activityForm.recurrence_type && activityForm.recurrence_time) {
-        const interval = parseInt(activityForm.recurrence_time) || 1;
-        nextDueAt = calculateNextDueDate(activityForm.recurrence_type, interval);
+      if (activityForm.is_recurring && activityForm.recurrence_type) {
+        nextDueAt = calculateNextDueDate(activityForm.recurrence_type);
       }
 
       const activityData = {
@@ -149,7 +152,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         activity_type: activityForm.activity_type,
         is_recurring: activityForm.is_recurring,
         recurrence_type: activityForm.is_recurring ? activityForm.recurrence_type || null : null,
-        recurrence_time: activityForm.is_recurring ? activityForm.recurrence_time || null : null,
+        recurrence_time: null,
         template_id: activityForm.activity_type === 'template_based' ? activityForm.template_id || null : null,
         next_due_at: nextDueAt?.toISOString() || null,
       };
@@ -213,58 +216,9 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       </DialogHeader>
 
       <div className="space-y-6 p-4">
-        <div>
-          <Label htmlFor="title" className="text-gray-700 dark:text-gray-200">Título</Label>
-          <Input
-            id="title"
-            value={activityForm.title}
-            onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
-            placeholder="Ex: Lançamento do produto"
-            className="dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="description" className="text-gray-700 dark:text-gray-200">Descrição</Label>
-          <Textarea
-            id="description"
-            value={activityForm.description}
-            onChange={(e) => setActivityForm({ ...activityForm, description: e.target.value })}
-            placeholder="Descreva a atividade..."
-            className="dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="status" className="text-gray-700 dark:text-gray-200">Status</Label>
-            <Select value={activityForm.status} onValueChange={(value: 'pending' | 'in_progress' | 'completed' | 'on_hold') => setActivityForm({ ...activityForm, status: value })}>
-              <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="in_progress">Em Progresso</SelectItem>
-                <SelectItem value="completed">Concluída</SelectItem>
-                <SelectItem value="on_hold">Em Espera</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="priority" className="text-gray-700 dark:text-gray-200">Prioridade</Label>
-            <Select value={activityForm.priority} onValueChange={(value: 'low' | 'medium' | 'high') => setActivityForm({ ...activityForm, priority: value })}>
-              <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                <SelectItem value="low">Baixa</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <BasicInfoForm formData={activityForm} onFormChange={handleFormChange} />
+        
+        <StatusPriorityForm formData={activityForm} onFormChange={handleFormChange} />
 
         <div>
           <Label htmlFor="due_date" className="text-gray-700 dark:text-gray-200">Data de Vencimento</Label>
@@ -276,130 +230,16 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="activity_type" className="text-gray-700 dark:text-gray-200">Tipo de Atividade</Label>
-          <Select value={activityForm.activity_type} onValueChange={(value: 'standard' | 'template_based' | 'recurring') => {
-            setActivityForm({ ...activityForm, activity_type: value });
-            if (value !== 'template_based') {
-              setActivityForm(prev => ({ ...prev, template_id: '' }));
-            }
-            if (value !== 'recurring') {
-              setActivityForm(prev => ({ ...prev, is_recurring: false, recurrence_type: '', recurrence_time: '' }));
-            }
-          }}>
-            <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-              <SelectItem value="standard">Padrão</SelectItem>
-              <SelectItem value="template_based">Baseada em Template</SelectItem>
-              <SelectItem value="recurring">Repetitiva</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <ActivityTypeForm 
+          formData={activityForm} 
+          onFormChange={handleFormChange}
+          userTemplates={userTemplates}
+          onTemplateSelect={handleTemplateSelect}
+        />
 
-        {activityForm.activity_type === 'template_based' && (
-          <div>
-            <Label htmlFor="template_id" className="text-gray-700 dark:text-gray-200">Template</Label>
-            <Select value={activityForm.template_id} onValueChange={handleTemplateSelect}>
-              <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                <SelectValue placeholder="Selecione um template" />
-              </SelectTrigger>
-              <SelectContent className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                {userTemplates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <RecurringForm formData={activityForm} onFormChange={handleFormChange} />
 
-        {activityForm.activity_type === 'recurring' && (
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_recurring"
-                checked={activityForm.is_recurring}
-                onCheckedChange={(checked) => setActivityForm({ ...activityForm, is_recurring: Boolean(checked) })}
-              />
-              <Label htmlFor="is_recurring" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-700 dark:text-gray-200">
-                Atividade Repetitiva
-              </Label>
-            </div>
-
-            {activityForm.is_recurring && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="recurrence_type" className="text-gray-700 dark:text-gray-200">Frequência</Label>
-                  <Select value={activityForm.recurrence_type} onValueChange={(value) => setActivityForm({ ...activityForm, recurrence_type: value })}>
-                    <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                      <SelectValue placeholder="Selecione a frequência" />
-                    </SelectTrigger>
-                    <SelectContent className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                      <SelectItem value="daily">Diária</SelectItem>
-                      <SelectItem value="weekly">Semanal</SelectItem>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="recurrence_time" className="text-gray-700 dark:text-gray-200">
-                    Intervalo ({activityForm.recurrence_type === 'daily' ? 'dias' : activityForm.recurrence_type === 'weekly' ? 'semanas' : 'meses'})
-                  </Label>
-                  <Input
-                    type="number"
-                    id="recurrence_time"
-                    value={activityForm.recurrence_time}
-                    onChange={(e) => setActivityForm({ ...activityForm, recurrence_time: e.target.value })}
-                    placeholder="Ex: 1"
-                    min="1"
-                    className="dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div>
-          <Label className="text-gray-700 dark:text-gray-200">Subtarefas</Label>
-          {subtasks.map((subtask, index) => (
-            <div key={index} className="flex items-center space-x-2 py-2 border-b border-gray-200 dark:border-slate-700">
-              <Input
-                type="text"
-                value={subtask.title}
-                onChange={(e) => {
-                  const newSubtasks = [...subtasks];
-                  newSubtasks[index].title = e.target.value;
-                  setSubtasks(newSubtasks);
-                }}
-                placeholder={`Subtarefa ${index + 1}`}
-                className="flex-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const newSubtasks = subtasks.filter((_, i) => i !== index);
-                  setSubtasks(newSubtasks);
-                }}
-              >
-                Remover
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => setSubtasks([...subtasks, { title: '', description: '', is_completed: false, order_index: subtasks.length }])} 
-          className="w-full dark:border-slate-600 dark:text-slate-200"
-        >
-          Adicionar Subtarefa
-        </Button>
+        <SubtasksForm subtasks={subtasks} onSubtasksChange={setSubtasks} />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
