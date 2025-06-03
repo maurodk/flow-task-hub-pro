@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -131,9 +132,9 @@ export const useMural = () => {
               likes_count: likesResult.count || 0,
               comments_count: commentsResult.count || 0,
               is_liked: !!userLikeResult.data,
-              attachments: post.attachments || [],
+              attachments: Array.isArray(post.attachments) ? post.attachments : [],
               activities
-            };
+            } as MuralPost;
           })
         );
 
@@ -169,8 +170,8 @@ export const useMural = () => {
             return {
               ...comment,
               author_name: profileData?.name || 'Usuário',
-              attachments: comment.attachments || []
-            };
+              attachments: Array.isArray(comment.attachments) ? comment.attachments : []
+            } as MuralComment;
           })
         );
 
