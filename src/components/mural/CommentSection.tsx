@@ -6,11 +6,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MuralComment } from '@/hooks/useMural';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import FileUpload from './FileUpload';
+import AttachmentViewer from './AttachmentViewer';
 
 interface CommentSectionProps {
   postId: string;
   comments: MuralComment[];
-  onAddComment: (postId: string, content: string) => void;
+  onAddComment: (postId: string, content: string, files?: File[]) => void;
   onLoadComments: (postId: string) => void;
   loading?: boolean;
 }
@@ -24,14 +26,16 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 }) => {
   const [newComment, setNewComment] = useState('');
   const [showComments, setShowComments] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newComment.trim()) return;
 
-    onAddComment(postId, newComment.trim());
+    onAddComment(postId, newComment.trim(), files);
     setNewComment('');
+    setFiles([]);
   };
 
   const toggleComments = () => {
@@ -61,6 +65,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               onChange={(e) => setNewComment(e.target.value)}
               rows={2}
             />
+            <FileUpload files={files} onFilesChange={setFiles} maxFiles={3} />
             <Button 
               type="submit" 
               size="sm" 
@@ -93,6 +98,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                       <p className="text-gray-700 dark:text-gray-300 text-sm">
                         {comment.content}
                       </p>
+                      <AttachmentViewer attachments={comment.attachments || []} />
                     </div>
                   </div>
                 </CardContent>

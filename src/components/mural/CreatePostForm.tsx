@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus } from 'lucide-react';
+import FileUpload from './FileUpload';
 
 interface CreatePostFormProps {
-  onSubmit: (title: string, content: string, activityIds: string[]) => void;
+  onSubmit: (title: string, content: string, activityIds: string[], files?: File[]) => void;
   userActivities: {id: string; title: string}[];
   loading?: boolean;
 }
@@ -19,6 +20,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSubmit, userActivitie
   const [content, setContent] = useState('');
   const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([]);
   const [selectedActivityId, setSelectedActivityId] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +29,12 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSubmit, userActivitie
       return;
     }
 
-    onSubmit(title.trim(), content.trim(), selectedActivityIds);
+    onSubmit(title.trim(), content.trim(), selectedActivityIds, files);
     setTitle('');
     setContent('');
     setSelectedActivityIds([]);
     setSelectedActivityId('');
+    setFiles([]);
   };
 
   const addActivity = () => {
@@ -114,6 +117,8 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSubmit, userActivitie
               </div>
             )}
           </div>
+
+          <FileUpload files={files} onFilesChange={setFiles} />
 
           <Button type="submit" disabled={loading || !title.trim() || !content.trim()}>
             {loading ? 'Publicando...' : 'Publicar'}

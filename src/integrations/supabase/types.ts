@@ -217,6 +217,7 @@ export type Database = {
       }
       mural_comments: {
         Row: {
+          attachments: Json | null
           content: string
           created_at: string
           id: string
@@ -225,6 +226,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json | null
           content: string
           created_at?: string
           id?: string
@@ -233,6 +235,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json | null
           content?: string
           created_at?: string
           id?: string
@@ -282,6 +285,7 @@ export type Database = {
       mural_posts: {
         Row: {
           activity_ids: string[] | null
+          attachments: Json | null
           content: string
           created_at: string
           id: string
@@ -292,6 +296,7 @@ export type Database = {
         }
         Insert: {
           activity_ids?: string[] | null
+          attachments?: Json | null
           content: string
           created_at?: string
           id?: string
@@ -302,6 +307,7 @@ export type Database = {
         }
         Update: {
           activity_ids?: string[] | null
+          attachments?: Json | null
           content?: string
           created_at?: string
           id?: string

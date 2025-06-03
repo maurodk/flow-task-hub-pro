@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useMural } from '@/hooks/useMural';
 import CreatePostForm from '@/components/mural/CreatePostForm';
 import CommentSection from '@/components/mural/CommentSection';
+import AttachmentViewer from '@/components/mural/AttachmentViewer';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -97,9 +98,22 @@ const Mural = () => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white">
-                              {post.author_name || 'Usuário'}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-gray-900 dark:text-white">
+                                {post.author_name || 'Usuário'}
+                              </h3>
+                              {post.activities && post.activities.length > 0 && (
+                                <>
+                                  <span className="text-gray-500 dark:text-gray-400">sobre</span>
+                                  <button
+                                    onClick={() => handleActivityClick(post.activities[0].id)}
+                                    className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                  >
+                                    {post.activities[0].title}
+                                  </button>
+                                </>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                               {formatDistanceToNow(new Date(post.created_at), {
                                 addSuffix: true,
@@ -117,9 +131,11 @@ const Mural = () => {
                   <CardContent>
                     <p className="text-gray-700 dark:text-gray-300 mb-4">{post.content}</p>
                     
-                    {post.activities && post.activities.length > 0 && (
+                    <AttachmentViewer attachments={post.attachments || []} />
+                    
+                    {post.activities && post.activities.length > 1 && (
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {post.activities.map((activity) => (
+                        {post.activities.slice(1).map((activity) => (
                           <Badge 
                             key={activity.id} 
                             variant="outline" 

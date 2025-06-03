@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +14,7 @@ export interface MuralPost {
   likes_count: number;
   comments_count: number;
   is_liked: boolean;
+  attachments?: any[];
   activities?: {
     id: string;
     title: string;
@@ -28,6 +28,7 @@ export interface MuralComment {
   created_at: string;
   user_id: string;
   author_name?: string;
+  attachments?: any[];
 }
 
 export const useMural = () => {
@@ -36,6 +37,31 @@ export const useMural = () => {
   const [comments, setComments] = useState<{[postId: string]: MuralComment[]}>({});
   const [userActivities, setUserActivities] = useState<{id: string; title: string}[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const uploadFile = async (file: File, folder: string = 'general'): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${folder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('mural-media')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('mural-media')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      toast.error('Erro ao fazer upload do arquivo');
+      return null;
+    }
+  };
 
   const fetchUserActivities = async () => {
     if (!user) return;
@@ -105,6 +131,7 @@ export const useMural = () => {
               likes_count: likesResult.count || 0,
               comments_count: commentsResult.count || 0,
               is_liked: !!userLikeResult.data,
+              attachments: post.attachments || [],
               activities
             };
           })
@@ -141,7 +168,8 @@ export const useMural = () => {
 
             return {
               ...comment,
-              author_name: profileData?.name || 'Usuário'
+              author_name: profileData?.name || 'Usuário',
+              attachments: comment.attachments || []
             };
           })
         );
@@ -157,20 +185,34 @@ export const useMural = () => {
     }
   };
 
-  const createPost = async (title: string, content: string, activityIds: string[]) => {
+  const createPost = async (title: string, content: string, activityIds: string[], files?: File[]) => {
     if (!user) {
       toast.error('Você precisa estar logado para criar um post');
       return;
     }
 
     try {
+      let attachments = [];
+      
+      if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadFile(file, 'posts'));
+        const urls = await Promise.all(uploadPromises);
+        attachments = urls.filter(url => url !== null).map((url, index) => ({
+          url,
+          name: files[index].name,
+          type: files[index].type,
+          size: files[index].size
+        }));
+      }
+
       const { error } = await supabase
         .from('mural_posts')
         .insert({
           title,
           content,
           activity_ids: activityIds,
-          user_id: user.id
+          user_id: user.id,
+          attachments
         });
 
       if (error) throw error;
@@ -183,19 +225,33 @@ export const useMural = () => {
     }
   };
 
-  const createComment = async (postId: string, content: string) => {
+  const createComment = async (postId: string, content: string, files?: File[]) => {
     if (!user) {
       toast.error('Você precisa estar logado para comentar');
       return;
     }
 
     try {
+      let attachments = [];
+      
+      if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadFile(file, 'comments'));
+        const urls = await Promise.all(uploadPromises);
+        attachments = urls.filter(url => url !== null).map((url, index) => ({
+          url,
+          name: files[index].name,
+          type: files[index].type,
+          size: files[index].size
+        }));
+      }
+
       const { error } = await supabase
         .from('mural_comments')
         .insert({
           post_id: postId,
           content,
-          user_id: user.id
+          user_id: user.id,
+          attachments
         });
 
       if (error) throw error;
@@ -258,6 +314,7 @@ export const useMural = () => {
     createPost,
     createComment,
     toggleLike,
-    fetchComments
+    fetchComments,
+    uploadFile
   };
 };
