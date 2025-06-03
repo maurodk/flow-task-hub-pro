@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -99,6 +100,7 @@ export const useMural = () => {
 
             return {
               ...post,
+              activity_ids: post.activity_ids || [],
               author_name: profileResult.data?.name || 'Usuário',
               likes_count: likesResult.count || 0,
               comments_count: commentsResult.count || 0,

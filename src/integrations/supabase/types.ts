@@ -281,6 +281,7 @@ export type Database = {
       }
       mural_posts: {
         Row: {
+          activity_ids: string[] | null
           content: string
           created_at: string
           id: string
@@ -290,6 +291,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activity_ids?: string[] | null
           content: string
           created_at?: string
           id?: string
@@ -299,6 +301,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activity_ids?: string[] | null
           content?: string
           created_at?: string
           id?: string
