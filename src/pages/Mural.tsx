@@ -10,11 +10,14 @@ import CreatePostForm from '@/components/mural/CreatePostForm';
 import CommentSection from '@/components/mural/CommentSection';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 const Mural = () => {
+  const navigate = useNavigate();
   const {
     posts,
     comments,
+    userActivities,
     loading,
     createPost,
     createComment,
@@ -24,6 +27,10 @@ const Mural = () => {
 
   const handleShare = () => {
     toast.info('Funcionalidade de compartilhamento em desenvolvimento');
+  };
+
+  const handleActivityClick = (activityId: string) => {
+    navigate(`/activities?highlight=${activityId}`);
   };
 
   const events = [
@@ -69,7 +76,7 @@ const Mural = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Posts principais */}
           <div className="lg:col-span-3 space-y-6">
-            <CreatePostForm onSubmit={createPost} />
+            <CreatePostForm onSubmit={createPost} userActivities={userActivities} />
 
             {posts.length === 0 ? (
               <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
@@ -110,11 +117,16 @@ const Mural = () => {
                   <CardContent>
                     <p className="text-gray-700 dark:text-gray-300 mb-4">{post.content}</p>
                     
-                    {post.tags && post.tags.length > 0 && (
+                    {post.activities && post.activities.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {post.tags.map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="dark:bg-slate-700 dark:text-slate-200">
-                            {tag}
+                        {post.activities.map((activity) => (
+                          <Badge 
+                            key={activity.id} 
+                            variant="outline" 
+                            className="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 dark:bg-slate-700 dark:text-slate-200"
+                            onClick={() => handleActivityClick(activity.id)}
+                          >
+                            📋 {activity.title}
                           </Badge>
                         ))}
                       </div>

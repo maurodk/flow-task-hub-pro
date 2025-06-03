@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,13 +7,17 @@ export interface MuralPost {
   id: string;
   title: string;
   content: string;
-  tags: string[];
+  activity_ids: string[];
   created_at: string;
   user_id: string;
   author_name?: string;
   likes_count: number;
   comments_count: number;
   is_liked: boolean;
+  activities?: {
+    id: string;
+    title: string;
+  }[];
 }
 
 export interface MuralComment {
@@ -30,7 +33,25 @@ export const useMural = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<MuralPost[]>([]);
   const [comments, setComments] = useState<{[postId: string]: MuralComment[]}>({});
+  const [userActivities, setUserActivities] = useState<{id: string; title: string}[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchUserActivities = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .select('id, title')
+        .eq('user_id', user.id)
+        .order('title');
+
+      if (error) throw error;
+      setUserActivities(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar atividades:', error);
+    }
+  };
 
   const fetchPosts = async () => {
     try {
@@ -66,12 +87,23 @@ export const useMural = () => {
                 .single()
             ]);
 
+            // Buscar atividades relacionadas se houver activity_ids
+            let activities = [];
+            if (post.activity_ids && post.activity_ids.length > 0) {
+              const { data: activitiesData } = await supabase
+                .from('activities')
+                .select('id, title')
+                .in('id', post.activity_ids);
+              activities = activitiesData || [];
+            }
+
             return {
               ...post,
               author_name: profileResult.data?.name || 'Usuário',
               likes_count: likesResult.count || 0,
               comments_count: commentsResult.count || 0,
-              is_liked: !!userLikeResult.data
+              is_liked: !!userLikeResult.data,
+              activities
             };
           })
         );
@@ -123,7 +155,7 @@ export const useMural = () => {
     }
   };
 
-  const createPost = async (title: string, content: string, tags: string[]) => {
+  const createPost = async (title: string, content: string, activityIds: string[]) => {
     if (!user) {
       toast.error('Você precisa estar logado para criar um post');
       return;
@@ -135,7 +167,7 @@ export const useMural = () => {
         .insert({
           title,
           content,
-          tags,
+          activity_ids: activityIds,
           user_id: user.id
         });
 
@@ -213,11 +245,13 @@ export const useMural = () => {
 
   useEffect(() => {
     fetchPosts();
+    fetchUserActivities();
   }, [user]);
 
   return {
     posts,
     comments,
+    userActivities,
     loading,
     createPost,
     createComment,
