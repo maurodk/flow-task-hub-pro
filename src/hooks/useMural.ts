@@ -36,10 +36,7 @@ export const useMural = () => {
     try {
       const { data: postsData, error: postsError } = await supabase
         .from('mural_posts')
-        .select(`
-          *,
-          profiles!mural_posts_user_id_fkey(name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (postsError) throw postsError;
@@ -47,7 +44,7 @@ export const useMural = () => {
       if (postsData) {
         const postsWithMetadata = await Promise.all(
           postsData.map(async (post) => {
-            const [likesResult, commentsResult, userLikeResult] = await Promise.all([
+            const [likesResult, commentsResult, userLikeResult, profileResult] = await Promise.all([
               supabase
                 .from('mural_likes')
                 .select('id', { count: 'exact' })
@@ -61,12 +58,17 @@ export const useMural = () => {
                 .select('id')
                 .eq('post_id', post.id)
                 .eq('user_id', user.id)
-                .single() : { data: null }
+                .single() : { data: null },
+              supabase
+                .from('profiles')
+                .select('name')
+                .eq('id', post.user_id)
+                .single()
             ]);
 
             return {
               ...post,
-              author_name: post.profiles?.name || 'Usuário',
+              author_name: profileResult.data?.name || 'Usuário',
               likes_count: likesResult.count || 0,
               comments_count: commentsResult.count || 0,
               is_liked: !!userLikeResult.data
@@ -86,22 +88,29 @@ export const useMural = () => {
 
   const fetchComments = async (postId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: commentsData, error } = await supabase
         .from('mural_comments')
-        .select(`
-          *,
-          profiles!mural_comments_user_id_fkey(name)
-        `)
+        .select('*')
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      if (data) {
-        const commentsWithAuthor = data.map(comment => ({
-          ...comment,
-          author_name: comment.profiles?.name || 'Usuário'
-        }));
+      if (commentsData) {
+        const commentsWithAuthor = await Promise.all(
+          commentsData.map(async (comment) => {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', comment.user_id)
+              .single();
+
+            return {
+              ...comment,
+              author_name: profileData?.name || 'Usuário'
+            };
+          })
+        );
 
         setComments(prev => ({
           ...prev,
