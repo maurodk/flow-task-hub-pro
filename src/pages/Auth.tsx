@@ -36,13 +36,13 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 dark:bg-slate-950 px-4">
+      <Card className="w-full max-w-md bg-slate-800 dark:bg-slate-900 border-slate-700 dark:border-slate-800">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
+          <CardTitle className="text-2xl font-bold text-white">
             {isLogin ? 'Entrar' : 'Criar Conta'}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-slate-300 dark:text-slate-400">
             {isLogin 
               ? 'Acesse seu gerenciador de atividades' 
               : 'Crie sua conta para começar'
@@ -53,7 +53,7 @@ const Auth = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name" className="text-slate-200">Nome</Label>
                 <Input
                   id="name"
                   type="text"
@@ -61,12 +61,13 @@ const Auth = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required={!isLogin}
+                  className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-slate-500"
                 />
               </div>
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-slate-200">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -74,11 +75,12 @@ const Auth = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password" className="text-slate-200">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -86,10 +88,11 @@ const Auth = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-slate-500"
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full bg-slate-600 hover:bg-slate-500 text-white" disabled={loading}>
               {loading ? 'Processando...' : (isLogin ? 'Entrar' : 'Criar Conta')}
             </Button>
           </form>
@@ -98,7 +101,7 @@ const Auth = () => {
             <Button
               variant="link"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm"
+              className="text-sm text-slate-300 hover:text-white"
             >
               {isLogin 
                 ? 'Não tem conta? Criar uma agora' 
