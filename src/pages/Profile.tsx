@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
@@ -9,19 +10,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { User, Mail, Save, Camera, Lock, Eye, EyeOff, Shield, Crown } from 'lucide-react';
+import { User, Mail, Save, Camera, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import AdminPanel from '@/components/admin/AdminPanel';
 
 const Profile = () => {
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading, initializeFirstAdmin } = useUserRole();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [initializingAdmin, setInitializingAdmin] = useState(false);
   
   const [profile, setProfile] = useState({
     name: '',
@@ -38,36 +38,6 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
   }, [user]);
-
-  useEffect(() => {
-    // Definir usuário atual como admin inicial se for o primeiro admin
-    const initializeAdmin = async () => {
-      if (user && !roleLoading) {
-        try {
-          // Verificar se já existem admins
-          const { data: existingAdmins } = await supabase
-            .from('user_roles')
-            .select('id')
-            .eq('role', 'admin')
-            .limit(1);
-
-          // Se não existem admins, tornar o usuário atual admin
-          if (!existingAdmins || existingAdmins.length === 0) {
-            await supabase
-              .from('user_roles')
-              .insert({
-                user_id: user.id,
-                role: 'admin'
-              });
-          }
-        } catch (error) {
-          console.error('Erro ao inicializar admin:', error);
-        }
-      }
-    };
-
-    initializeAdmin();
-  }, [user, roleLoading]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -93,25 +63,6 @@ const Profile = () => {
     } catch (error: any) {
       console.error('Erro ao buscar perfil:', error);
       toast.error('Erro ao carregar perfil');
-    }
-  };
-
-  const handleInitializeFirstAdmin = async () => {
-    setInitializingAdmin(true);
-    
-    try {
-      const result = await initializeFirstAdmin();
-      
-      if (result.success) {
-        toast.success('Você foi promovido a administrador!');
-      } else {
-        toast.error(typeof result.error === 'string' ? result.error : 'Não foi possível promover para admin');
-      }
-    } catch (error) {
-      console.error('Erro ao inicializar admin:', error);
-      toast.error('Erro ao inicializar administrador');
-    } finally {
-      setInitializingAdmin(false);
     }
   };
 
@@ -271,33 +222,8 @@ const Profile = () => {
           </p>
         </div>
 
-        {/* Botão para inicializar primeiro admin */}
-        {!roleLoading && !isAdmin && (
-          <Card className="mb-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-            <CardHeader>
-              <CardTitle className="text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                <Crown className="h-5 w-5" />
-                Configuração de Administrador
-              </CardTitle>
-              <CardDescription className="text-blue-700 dark:text-blue-300">
-                Parece que ainda não há administradores no sistema. Clique no botão abaixo para se tornar o primeiro administrador.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={handleInitializeFirstAdmin}
-                disabled={initializingAdmin}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Crown className="h-4 w-4 mr-2" />
-                {initializingAdmin ? 'Configurando...' : 'Tornar-se Administrador'}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 dark:bg-slate-800">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} dark:bg-slate-800`}>
             <TabsTrigger value="profile" className="dark:data-[state=active]:bg-slate-700">
               Informações Pessoais
             </TabsTrigger>
