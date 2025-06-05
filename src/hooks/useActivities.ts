@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,20 +8,28 @@ export const useActivities = () => {
   const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityData[]>([]);
   const [userTemplates, setUserTemplates] = useState<UserTemplate[]>([]);
+  const [selectedSector, setSelectedSector] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
-  const fetchActivities = async () => {
+  const fetchActivities = async (sectorFilter?: string) => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('activities')
         .select(`
           *,
-          activity_subtasks (*)
+          activity_subtasks (*),
+          sector:sectors(name)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+
+      if (sectorFilter) {
+        query = query.eq('sector_id', sectorFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -31,7 +38,8 @@ export const useActivities = () => {
         status: activity.status as 'pending' | 'in_progress' | 'completed' | 'on_hold',
         priority: activity.priority as 'low' | 'medium' | 'high',
         activity_type: activity.activity_type as 'standard' | 'template_based' | 'recurring',
-        subtasks: activity.activity_subtasks?.sort((a: any, b: any) => a.order_index - b.order_index) || []
+        subtasks: activity.activity_subtasks?.sort((a: any, b: any) => a.order_index - b.order_index) || [],
+        sector_name: activity.sector?.name || null
       })) || [];
 
       setActivities(formattedActivities);
@@ -111,6 +119,7 @@ export const useActivities = () => {
           recurrence_type: formData.recurrence_type || null,
           recurrence_time: formData.recurrence_time || null,
           template_id: formData.template_id || null,
+          sector_id: formData.sector_id || null,
           next_due_at: nextDueAt?.toISOString() || null,
           user_id: user.id,
           progress: 0
@@ -139,7 +148,7 @@ export const useActivities = () => {
 
       if (error) throw error;
 
-      fetchActivities();
+      fetchActivities(selectedSector);
     } catch (error: any) {
       console.error('Erro ao atualizar subtask:', error);
       toast.error('Erro ao atualizar subtarefa');
@@ -156,7 +165,7 @@ export const useActivities = () => {
       if (error) throw error;
 
       toast.success('Atividade excluída!');
-      fetchActivities();
+      fetchActivities(selectedSector);
     } catch (error: any) {
       console.error('Erro ao excluir atividade:', error);
       toast.error('Erro ao excluir atividade');
@@ -164,14 +173,16 @@ export const useActivities = () => {
   };
 
   useEffect(() => {
-    fetchActivities();
+    fetchActivities(selectedSector);
     fetchUserTemplates();
-  }, []);
+  }, [selectedSector]);
 
   return {
     activities,
     userTemplates,
+    selectedSector,
     loading,
+    setSelectedSector,
     fetchActivities,
     fetchUserTemplates,
     toggleSubtask,

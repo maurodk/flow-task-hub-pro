@@ -23,6 +23,7 @@ export type Database = {
           progress: number | null
           recurrence_time: string | null
           recurrence_type: string | null
+          sector_id: string | null
           status: string
           template_id: string | null
           title: string
@@ -42,6 +43,7 @@ export type Database = {
           progress?: number | null
           recurrence_time?: string | null
           recurrence_type?: string | null
+          sector_id?: string | null
           status?: string
           template_id?: string | null
           title: string
@@ -61,6 +63,7 @@ export type Database = {
           progress?: number | null
           recurrence_time?: string | null
           recurrence_type?: string | null
+          sector_id?: string | null
           status?: string
           template_id?: string | null
           title?: string
@@ -68,6 +71,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "activities_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "activities_template_id_fkey"
             columns: ["template_id"]
@@ -289,6 +299,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          sector_id: string | null
           tags: string[] | null
           title: string
           updated_at: string
@@ -300,6 +311,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          sector_id?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -311,12 +323,21 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          sector_id?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mural_posts_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -341,6 +362,30 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sectors: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -393,6 +438,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sectors: {
+        Row: {
+          created_at: string
+          id: string
+          sector_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sector_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sector_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sectors_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_template_subtasks: {
         Row: {
           created_at: string
@@ -433,12 +507,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_sectors: {
+        Args: { user_id: string }
+        Returns: {
+          sector_id: string
+          sector_name: string
+        }[]
+      }
       has_any_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
       is_admin: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      user_belongs_to_sector: {
+        Args: { user_id: string; sector_id: string }
         Returns: boolean
       }
     }

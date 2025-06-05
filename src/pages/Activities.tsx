@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useActivities } from '@/hooks/useActivities';
 import ActivityList from '@/components/activities/ActivityList';
 import ActivityForm from '@/components/activities/ActivityForm';
+import SectorFilter from '@/components/SectorFilter';
 import { ActivityData } from '@/types/activity';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -10,7 +11,9 @@ const Activities = () => {
   const { 
     activities, 
     userTemplates, 
+    selectedSector,
     loading, 
+    setSelectedSector,
     fetchActivities, 
     toggleSubtask, 
     deleteActivity, 
@@ -58,6 +61,18 @@ const Activities = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
+          {/* Filtro de setores */}
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Minhas Atividades
+            </h1>
+            <SectorFilter 
+              value={selectedSector} 
+              onChange={setSelectedSector}
+              showLabel={false}
+            />
+          </div>
+
           <Tabs defaultValue="pending" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="pending" className="relative">

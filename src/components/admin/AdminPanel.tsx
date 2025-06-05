@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Shield, Users, Key, Mail } from 'lucide-react';
+import { Shield, Users, Key, Mail, Building2 } from 'lucide-react';
+import SectorManagement from './SectorManagement';
 
 interface User {
   id: string;
@@ -201,6 +202,10 @@ const AdminPanel = () => {
             <Users className="h-4 w-4 mr-2" />
             Usuários
           </TabsTrigger>
+          <TabsTrigger value="sectors">
+            <Building2 className="h-4 w-4 mr-2" />
+            Setores
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -317,6 +322,10 @@ const AdminPanel = () => {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="sectors">
+          <SectorManagement />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +8,7 @@ export interface MuralPost {
   title: string;
   content: string;
   activity_ids: string[];
+  sector_id?: string;
   created_at: string;
   user_id: string;
   author_name?: string;
@@ -20,6 +20,7 @@ export interface MuralPost {
     id: string;
     title: string;
   }[];
+  sector_name?: string;
 }
 
 export interface MuralComment {
@@ -37,6 +38,7 @@ export const useMural = () => {
   const [posts, setPosts] = useState<MuralPost[]>([]);
   const [comments, setComments] = useState<{[postId: string]: MuralComment[]}>({});
   const [userActivities, setUserActivities] = useState<{id: string; title: string}[]>([]);
+  const [selectedSector, setSelectedSector] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   const uploadFile = async (file: File, folder: string = 'general'): Promise<string | null> => {
@@ -81,12 +83,21 @@ export const useMural = () => {
     }
   };
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (sectorFilter?: string) => {
     try {
-      const { data: postsData, error: postsError } = await supabase
+      let query = supabase
         .from('mural_posts')
-        .select('*')
+        .select(`
+          *,
+          sector:sectors(name)
+        `)
         .order('created_at', { ascending: false });
+
+      if (sectorFilter) {
+        query = query.eq('sector_id', sectorFilter);
+      }
+
+      const { data: postsData, error: postsError } = await query;
 
       if (postsError) throw postsError;
 
@@ -133,7 +144,8 @@ export const useMural = () => {
               comments_count: commentsResult.count || 0,
               is_liked: !!userLikeResult.data,
               attachments: Array.isArray(post.attachments) ? post.attachments : [],
-              activities
+              activities,
+              sector_name: post.sector?.name || null
             } as MuralPost;
           })
         );
@@ -186,7 +198,7 @@ export const useMural = () => {
     }
   };
 
-  const createPost = async (title: string, content: string, activityIds: string[], files?: File[]) => {
+  const createPost = async (title: string, content: string, activityIds: string[], sectorId?: string, files?: File[]) => {
     if (!user) {
       toast.error('Você precisa estar logado para criar um post');
       return;
@@ -212,6 +224,7 @@ export const useMural = () => {
           title,
           content,
           activity_ids: activityIds,
+          sector_id: sectorId || null,
           user_id: user.id,
           attachments
         });
@@ -219,7 +232,7 @@ export const useMural = () => {
       if (error) throw error;
 
       toast.success('Post criado com sucesso!');
-      fetchPosts();
+      fetchPosts(selectedSector);
     } catch (error) {
       console.error('Erro ao criar post:', error);
       toast.error('Erro ao criar post');
@@ -259,7 +272,7 @@ export const useMural = () => {
 
       toast.success('Comentário adicionado!');
       fetchComments(postId);
-      fetchPosts(); // Atualizar contagem de comentários
+      fetchPosts(selectedSector); // Atualizar contagem de comentários
     } catch (error) {
       console.error('Erro ao criar comentário:', error);
       toast.error('Erro ao comentar');
@@ -303,15 +316,17 @@ export const useMural = () => {
   };
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(selectedSector);
     fetchUserActivities();
-  }, [user]);
+  }, [user, selectedSector]);
 
   return {
     posts,
     comments,
     userActivities,
+    selectedSector,
     loading,
+    setSelectedSector,
     createPost,
     createComment,
     toggleLike,
