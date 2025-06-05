@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Plus } from 'lucide-react';
 import FileUpload from './FileUpload';
+import SectorForm from '../activities/forms/SectorForm';
 
 interface CreatePostFormProps {
-  onSubmit: (title: string, content: string, activityIds: string[], files?: File[]) => void;
+  onSubmit: (title: string, content: string, activityIds: string[], sectorId?: string, files?: File[]) => void;
   userActivities: {id: string; title: string}[];
   loading?: boolean;
 }
@@ -20,6 +21,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSubmit, userActivitie
   const [content, setContent] = useState('');
   const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([]);
   const [selectedActivityId, setSelectedActivityId] = useState('');
+  const [selectedSectorId, setSelectedSectorId] = useState('');
   const [files, setFiles] = useState<File[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -29,11 +31,12 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSubmit, userActivitie
       return;
     }
 
-    onSubmit(title.trim(), content.trim(), selectedActivityIds, files);
+    onSubmit(title.trim(), content.trim(), selectedActivityIds, selectedSectorId || undefined, files);
     setTitle('');
     setContent('');
     setSelectedActivityIds([]);
     setSelectedActivityId('');
+    setSelectedSectorId('');
     setFiles([]);
   };
 
@@ -77,6 +80,11 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onSubmit, userActivitie
               required
             />
           </div>
+
+          <SectorForm 
+            value={selectedSectorId} 
+            onChange={setSelectedSectorId} 
+          />
 
           <div>
             <div className="flex gap-2 mb-2">

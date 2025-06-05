@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ActivityData, ActivityFormData, UserTemplate, SubtaskData } from '@/types/activity';
+import { ActivityData, ActivityFormData, UserTemplate, SubtaskFormData } from '@/types/activity';
 import { DatePicker } from './DatePicker';
 import { BasicInfoForm } from './forms/BasicInfoForm';
 import { StatusPriorityForm } from './forms/StatusPriorityForm';
 import { ActivityTypeForm } from './forms/ActivityTypeForm';
 import { RecurringForm } from './forms/RecurringForm';
 import { SubtasksForm } from './forms/SubtasksForm';
+import SectorForm from './forms/SectorForm';
 
 interface ActivityFormProps {
   editingActivity: ActivityData | null;
@@ -41,9 +42,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
     recurrence_type: '',
     recurrence_time: '',
     template_id: '',
+    sector_id: '',
   });
 
-  const [subtasks, setSubtasks] = useState<Omit<SubtaskData, 'id'>[]>([]);
+  const [subtasks, setSubtasks] = useState<SubtaskFormData[]>([]);
   const [dueDate, setDueDate] = useState<Date | undefined>();
 
   useEffect(() => {
@@ -59,6 +61,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         recurrence_type: editingActivity.recurrence_type || '',
         recurrence_time: editingActivity.recurrence_time || '',
         template_id: editingActivity.template_id || '',
+        sector_id: editingActivity.sector_id || '',
       });
       
       if (editingActivity.due_date) {
@@ -88,6 +91,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       recurrence_type: '',
       recurrence_time: '',
       template_id: '',
+      sector_id: '',
     });
     setSubtasks([]);
     setDueDate(undefined);
@@ -229,6 +233,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             className="dark:bg-slate-700 dark:border-slate-600 dark:text-white"
           />
         </div>
+
+        <SectorForm 
+          value={activityForm.sector_id || ''} 
+          onChange={(value) => handleFormChange({ sector_id: value })} 
+        />
 
         <ActivityTypeForm 
           formData={activityForm} 

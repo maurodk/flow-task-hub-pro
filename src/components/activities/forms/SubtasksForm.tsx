@@ -3,11 +3,11 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SubtaskData } from '@/types/activity';
+import { SubtaskFormData } from '@/types/activity';
 
 interface SubtasksFormProps {
-  subtasks: Omit<SubtaskData, 'id'>[];
-  onSubtasksChange: (subtasks: Omit<SubtaskData, 'id'>[]) => void;
+  subtasks: SubtaskFormData[];
+  onSubtasksChange: (subtasks: SubtaskFormData[]) => void;
 }
 
 export const SubtasksForm: React.FC<SubtasksFormProps> = ({
@@ -28,7 +28,12 @@ export const SubtasksForm: React.FC<SubtasksFormProps> = ({
   const addSubtask = () => {
     onSubtasksChange([
       ...subtasks,
-      { title: '', description: '', is_completed: false, order_index: subtasks.length }
+      { 
+        title: '', 
+        description: '', 
+        is_completed: false, 
+        order_index: subtasks.length 
+      }
     ]);
   };
 
