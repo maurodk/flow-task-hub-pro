@@ -27,6 +27,14 @@ const SectorFilter: React.FC<SectorFilterProps> = ({
         userSectors.some(us => us.sector_id === sector.id)
       );
 
+  const handleValueChange = (newValue: string) => {
+    // Converter "all" de volta para string vazia
+    onChange(newValue === "all" ? "" : newValue);
+  };
+
+  // Converter string vazia para "all" para o componente Select
+  const selectValue = value === "" ? "all" : value;
+
   return (
     <div className="space-y-2">
       {showLabel && (
@@ -35,12 +43,12 @@ const SectorFilter: React.FC<SectorFilterProps> = ({
           Filtrar por Setor
         </label>
       )}
-      <Select value={value} onValueChange={onChange}>
+      <Select value={selectValue} onValueChange={handleValueChange}>
         <SelectTrigger className="w-[200px]">
           <SelectValue placeholder="Todos os setores" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">
+          <SelectItem value="all">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               Todos os setores
