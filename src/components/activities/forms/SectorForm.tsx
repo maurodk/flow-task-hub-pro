@@ -23,18 +23,26 @@ const SectorForm: React.FC<SectorFormProps> = ({ value, onChange }) => {
         userSectors.some(us => us.sector_id === sector.id)
       );
 
+  const handleValueChange = (newValue: string) => {
+    // Converter "none" de volta para string vazia
+    onChange(newValue === "none" ? "" : newValue);
+  };
+
+  // Converter string vazia para "none" para o componente Select
+  const selectValue = value === "" ? "none" : value;
+
   return (
     <div className="space-y-2">
       <Label htmlFor="sector" className="flex items-center gap-2">
         <Building2 className="h-4 w-4" />
         Setor
       </Label>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={selectValue} onValueChange={handleValueChange}>
         <SelectTrigger>
           <SelectValue placeholder="Selecione um setor (opcional)" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Nenhum setor</SelectItem>
+          <SelectItem value="none">Nenhum setor</SelectItem>
           {availableSectors.map((sector) => (
             <SelectItem key={sector.id} value={sector.id}>
               {sector.name}
