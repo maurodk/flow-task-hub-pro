@@ -9,39 +9,54 @@ export const useUserRole = () => {
   const [loading, setLoading] = useState(true);
 
   const checkUserRole = async () => {
+    console.log('🔍 Verificando role do usuário:', user?.id);
+    
     if (!user) {
+      console.log('❌ Usuário não logado');
       setIsAdmin(false);
       setLoading(false);
       return;
     }
 
     try {
+      setLoading(true);
+      console.log('📊 Consultando roles no banco...');
+      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .single();
+        .eq('role', 'admin');
 
-      if (error && error.code !== 'PGRST116') {
+      console.log('📋 Resposta da consulta:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro na consulta:', error);
         throw error;
       }
 
-      setIsAdmin(!!data);
+      const hasAdminRole = data && data.length > 0;
+      console.log('🔐 Usuário é admin?', hasAdminRole);
+      
+      setIsAdmin(hasAdminRole);
     } catch (error) {
-      console.error('Erro ao verificar role do usuário:', error);
+      console.error('💥 Erro ao verificar role do usuário:', error);
       setIsAdmin(false);
     } finally {
       setLoading(false);
+      console.log('✅ Verificação de role finalizada');
     }
   };
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered - user changed:', user?.id);
     checkUserRole();
   }, [user]);
 
   const makeUserAdmin = async (userId: string) => {
     try {
+      console.log('🔧 Tornando usuário admin:', userId);
+      
       const { error } = await supabase
         .from('user_roles')
         .insert({
@@ -50,15 +65,19 @@ export const useUserRole = () => {
         });
 
       if (error) throw error;
+      
+      console.log('✅ Usuário promovido a admin com sucesso');
       return { success: true };
     } catch (error) {
-      console.error('Erro ao tornar usuário admin:', error);
+      console.error('❌ Erro ao tornar usuário admin:', error);
       return { success: false, error };
     }
   };
 
   const removeAdminRole = async (userId: string) => {
     try {
+      console.log('🔧 Removendo role de admin:', userId);
+      
       const { error } = await supabase
         .from('user_roles')
         .delete()
@@ -66,9 +85,11 @@ export const useUserRole = () => {
         .eq('role', 'admin');
 
       if (error) throw error;
+      
+      console.log('✅ Role de admin removida com sucesso');
       return { success: true };
     } catch (error) {
-      console.error('Erro ao remover role de admin:', error);
+      console.error('❌ Erro ao remover role de admin:', error);
       return { success: false, error };
     }
   };

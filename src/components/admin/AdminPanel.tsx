@@ -32,19 +32,32 @@ const AdminPanel = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('🔍 AdminPanel: Buscando usuários...');
+      setLoading(true);
+      
       // Buscar perfis primeiro
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, name, created_at');
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('❌ Erro ao buscar profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('📋 Profiles encontrados:', profiles?.length);
 
       // Buscar roles separadamente
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error('❌ Erro ao buscar roles:', rolesError);
+        throw rolesError;
+      }
+
+      console.log('🔐 Roles encontrados:', roles?.length);
 
       // Combinar os dados
       const usersData: User[] = profiles?.map(profile => {
@@ -61,9 +74,10 @@ const AdminPanel = () => {
         };
       }) || [];
 
+      console.log('👥 Usuários processados:', usersData.length);
       setUsers(usersData);
     } catch (error: any) {
-      console.error('Erro ao buscar usuários:', error);
+      console.error('💥 Erro ao buscar usuários:', error);
       toast.error('Erro ao carregar usuários');
     } finally {
       setLoading(false);
@@ -72,6 +86,8 @@ const AdminPanel = () => {
 
   const toggleAdminRole = async (userId: string, isCurrentlyAdmin: boolean) => {
     try {
+      console.log('🔧 Alterando role de admin:', { userId, isCurrentlyAdmin });
+      
       if (isCurrentlyAdmin) {
         const { error } = await supabase
           .from('user_roles')
@@ -93,9 +109,10 @@ const AdminPanel = () => {
         toast.success('Usuário promovido a administrador');
       }
 
+      console.log('✅ Role alterada com sucesso');
       fetchUsers();
     } catch (error: any) {
-      console.error('Erro ao alterar role:', error);
+      console.error('❌ Erro ao alterar role:', error);
       toast.error('Erro ao alterar permissões');
     }
   };
@@ -140,6 +157,7 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
+    console.log('🚀 AdminPanel montado, buscando usuários...');
     fetchUsers();
   }, []);
 
@@ -150,7 +168,21 @@ const AdminPanel = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Carregando usuários...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-300">Nenhum usuário encontrado</p>
+        </div>
       </div>
     );
   }
@@ -160,6 +192,7 @@ const AdminPanel = () => {
       <div className="flex items-center gap-2">
         <Shield className="h-5 w-5" />
         <h2 className="text-xl font-semibold">Gerenciar Acessos</h2>
+        <span className="text-sm text-gray-500">({users.length} usuários)</span>
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">

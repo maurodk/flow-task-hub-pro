@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
@@ -220,14 +219,26 @@ const Profile = () => {
           <p className="text-gray-600 dark:text-gray-300 mt-2">
             Gerencie suas informações pessoais e configurações de conta.
           </p>
+          {roleLoading && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              Verificando permissões...
+            </div>
+          )}
+          {!roleLoading && isAdmin && (
+            <div className="flex items-center gap-2 mt-2">
+              <Shield className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-600">Administrador</span>
+            </div>
+          )}
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} dark:bg-slate-800`}>
+          <TabsList className={`grid w-full ${isAdmin && !roleLoading ? 'grid-cols-2' : 'grid-cols-1'} dark:bg-slate-800`}>
             <TabsTrigger value="profile" className="dark:data-[state=active]:bg-slate-700">
               Informações Pessoais
             </TabsTrigger>
-            {isAdmin && (
+            {isAdmin && !roleLoading && (
               <TabsTrigger value="admin" className="dark:data-[state=active]:bg-slate-700">
                 <Shield className="h-4 w-4 mr-2" />
                 Gerenciar Acessos
@@ -481,7 +492,7 @@ const Profile = () => {
             </Card>
           </TabsContent>
 
-          {isAdmin && (
+          {isAdmin && !roleLoading && (
             <TabsContent value="admin">
               <AdminPanel />
             </TabsContent>
