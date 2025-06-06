@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,7 +120,7 @@ export const useActivities = () => {
           recurrence_type: formData.recurrence_type || null,
           recurrence_time: formData.recurrence_time || null,
           template_id: formData.template_id || null,
-          sector_id: formData.sector_id || null,
+          sector_id: formData.sector_id || null, // FIX: Incluir sector_id
           next_due_at: nextDueAt?.toISOString() || null,
           user_id: user.id,
           progress: 0

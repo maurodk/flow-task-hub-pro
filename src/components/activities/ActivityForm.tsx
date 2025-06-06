@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,6 +157,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         recurrence_type: activityForm.is_recurring ? activityForm.recurrence_type || null : null,
         recurrence_time: null,
         template_id: activityForm.activity_type === 'template_based' ? activityForm.template_id || null : null,
+        sector_id: activityForm.sector_id || null, // FIX: Incluir sector_id
         next_due_at: nextDueAt?.toISOString() || null,
       };
 
