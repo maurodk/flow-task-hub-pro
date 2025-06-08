@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useAuth';
+import { useSectors } from '@/hooks/useSectors';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +46,8 @@ interface Profile {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { userSectors, loading: sectorsLoading } = useSectors();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -67,16 +71,46 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    fetchActivities();
-    fetchProfiles();
-  }, []);
+    // Só buscar dados quando todas as dependências estiverem carregadas
+    if (!roleLoading && !sectorsLoading) {
+      fetchActivities();
+      fetchProfiles();
+    }
+  }, [roleLoading, sectorsLoading, isAdmin, userSectors]);
 
   const fetchActivities = async () => {
+    if (!user || roleLoading || sectorsLoading) return;
+
     try {
-      const { data, error } = await supabase
+      console.log('🔍 Dashboard: Buscando atividades para usuário:', user.id);
+      console.log('👤 É admin?', isAdmin);
+      console.log('🏢 Setores do usuário:', userSectors.map(us => us.sector_id));
+
+      let query = supabase
         .from('activities')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      // Aplicar lógica de visualização baseada no role
+      if (isAdmin) {
+        console.log('🔓 Admin: buscando todas as atividades');
+        // Admins veem todas as atividades, sem filtro de usuário
+      } else {
+        console.log('🔒 Usuário comum: aplicando filtros');
+        // Usuários comuns veem atividades dos seus setores + atividades que criaram
+        const userSectorIds = userSectors.map(us => us.sector_id);
+        
+        if (userSectorIds.length > 0) {
+          // Filtrar por: (atividades dos setores do usuário) OU (atividades criadas pelo usuário)
+          query = query.or(`sector_id.in.(${userSectorIds.join(',')}),user_id.eq.${user.id}`);
+        } else {
+          // Se não tem setores, só vê as próprias atividades
+          query = query.eq('user_id', user.id);
+        }
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -87,6 +121,7 @@ const Dashboard = () => {
         priority: activity.priority as 'low' | 'medium' | 'high',
       }));
       
+      console.log('📋 Dashboard: Atividades encontradas:', typedActivities.length);
       setActivities(typedActivities);
     } catch (error: any) {
       console.error('Erro ao buscar atividades:', error);
