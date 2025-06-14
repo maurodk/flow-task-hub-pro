@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { MuralComment } from '@/hooks/useMural';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -80,9 +81,12 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               <Card key={comment.id} className="p-3">
                 <CardContent className="p-0">
                   <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold text-sm">
-                      {comment.author_name?.[0]?.toUpperCase() || 'U'}
-                    </div>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={comment.author_avatar_url || undefined} />
+                      <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 font-semibold text-sm">
+                        {comment.author_name?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-sm text-gray-900 dark:text-white">

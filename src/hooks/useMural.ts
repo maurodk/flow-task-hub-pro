@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +13,7 @@ export interface MuralPost {
   created_at: string;
   user_id: string;
   author_name?: string;
+  author_avatar_url?: string;
   likes_count: number;
   comments_count: number;
   is_liked: boolean;
@@ -30,6 +32,7 @@ export interface MuralComment {
   created_at: string;
   user_id: string;
   author_name?: string;
+  author_avatar_url?: string;
   attachments?: any[];
 }
 
@@ -121,7 +124,7 @@ export const useMural = () => {
                 .single() : { data: null },
               supabase
                 .from('profiles')
-                .select('name')
+                .select('name, avatar_url')
                 .eq('id', post.user_id)
                 .single()
             ]);
@@ -140,6 +143,7 @@ export const useMural = () => {
               ...post,
               activity_ids: post.activity_ids || [],
               author_name: profileResult.data?.name || 'Usuário',
+              author_avatar_url: profileResult.data?.avatar_url || null,
               likes_count: likesResult.count || 0,
               comments_count: commentsResult.count || 0,
               is_liked: !!userLikeResult.data,
@@ -175,13 +179,14 @@ export const useMural = () => {
           commentsData.map(async (comment) => {
             const { data: profileData } = await supabase
               .from('profiles')
-              .select('name')
+              .select('name, avatar_url')
               .eq('id', comment.user_id)
               .single();
 
             return {
               ...comment,
               author_name: profileData?.name || 'Usuário',
+              author_avatar_url: profileData?.avatar_url || null,
               attachments: Array.isArray(comment.attachments) ? comment.attachments : []
             } as MuralComment;
           })
