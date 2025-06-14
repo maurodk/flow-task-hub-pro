@@ -315,6 +315,94 @@ export const useMural = () => {
     }
   };
 
+  const editPost = async (postId: string, title: string, content: string, activityIds: string[], sectorId?: string, files?: File[]) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para editar um post');
+      return;
+    }
+
+    try {
+      let attachments = [];
+      
+      if (files && files.length > 0) {
+        const uploadPromises = files.map(file => uploadFile(file, 'posts'));
+        const urls = await Promise.all(uploadPromises);
+        attachments = urls.filter(url => url !== null).map((url, index) => ({
+          url,
+          name: files[index].name,
+          type: files[index].type,
+          size: files[index].size
+        }));
+      }
+
+      const updateData: any = {
+        title,
+        content,
+        activity_ids: activityIds,
+        sector_id: sectorId || null,
+        updated_at: new Date().toISOString()
+      };
+
+      if (files && files.length > 0) {
+        updateData.attachments = attachments;
+      }
+
+      const { error } = await supabase
+        .from('mural_posts')
+        .update(updateData)
+        .eq('id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Post editado com sucesso!');
+      fetchPosts(selectedSector);
+    } catch (error) {
+      console.error('Erro ao editar post:', error);
+      toast.error('Erro ao editar post');
+    }
+  };
+
+  const deletePost = async (postId: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para excluir um post');
+      return;
+    }
+
+    try {
+      // Primeiro, excluir comentários relacionados
+      const { error: commentsError } = await supabase
+        .from('mural_comments')
+        .delete()
+        .eq('post_id', postId);
+
+      if (commentsError) throw commentsError;
+
+      // Depois, excluir curtidas relacionadas
+      const { error: likesError } = await supabase
+        .from('mural_likes')
+        .delete()
+        .eq('post_id', postId);
+
+      if (likesError) throw likesError;
+
+      // Por fim, excluir o post
+      const { error } = await supabase
+        .from('mural_posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Post excluído com sucesso!');
+      fetchPosts(selectedSector);
+    } catch (error) {
+      console.error('Erro ao excluir post:', error);
+      toast.error('Erro ao excluir post');
+    }
+  };
+
   useEffect(() => {
     fetchPosts(selectedSector);
     fetchUserActivities();
@@ -331,6 +419,8 @@ export const useMural = () => {
     createComment,
     toggleLike,
     fetchComments,
-    uploadFile
+    uploadFile,
+    editPost,
+    deletePost
   };
 };

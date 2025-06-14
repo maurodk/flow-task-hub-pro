@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,12 +8,17 @@ import { useMural } from '@/hooks/useMural';
 import CreatePostForm from '@/components/mural/CreatePostForm';
 import CommentSection from '@/components/mural/CommentSection';
 import AttachmentViewer from '@/components/mural/AttachmentViewer';
+import PostActions from '@/components/mural/PostActions';
+import EditPostModal from '@/components/mural/EditPostModal';
+import DeletePostModal from '@/components/mural/DeletePostModal';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Mural = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     posts,
     comments,
@@ -23,8 +27,13 @@ const Mural = () => {
     createPost,
     createComment,
     toggleLike,
-    fetchComments
+    fetchComments,
+    editPost,
+    deletePost
   } = useMural();
+
+  const [editingPost, setEditingPost] = useState<any>(null);
+  const [deletingPost, setDeletingPost] = useState<any>(null);
 
   const handleShare = () => {
     toast.info('Funcionalidade de compartilhamento em desenvolvimento');
@@ -32,6 +41,28 @@ const Mural = () => {
 
   const handleActivityClick = (activityId: string) => {
     navigate(`/activities?highlight=${activityId}`);
+  };
+
+  const handleEditPost = (post: any) => {
+    setEditingPost(post);
+  };
+
+  const handleDeletePost = (post: any) => {
+    setDeletingPost(post);
+  };
+
+  const handleSaveEdit = (title: string, content: string, activityIds: string[], sectorId?: string, files?: File[]) => {
+    if (editingPost) {
+      editPost(editingPost.id, title, content, activityIds, sectorId, files);
+      setEditingPost(null);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (deletingPost) {
+      deletePost(deletingPost.id);
+      setDeletingPost(null);
+    }
   };
 
   const events = [
@@ -121,6 +152,12 @@ const Mural = () => {
                               })}
                             </p>
                           </div>
+                          {user && user.id === post.user_id && (
+                            <PostActions 
+                              onEdit={() => handleEditPost(post)}
+                              onDelete={() => handleDeletePost(post)}
+                            />
+                          )}
                         </div>
                         <CardTitle className="mt-2 text-gray-900 dark:text-white">
                           {post.title}
@@ -246,6 +283,22 @@ const Mural = () => {
           </div>
         </div>
       </div>
+
+      {/* Modais */}
+      <EditPostModal
+        post={editingPost}
+        isOpen={!!editingPost}
+        onClose={() => setEditingPost(null)}
+        onSave={handleSaveEdit}
+        userActivities={userActivities}
+      />
+
+      <DeletePostModal
+        isOpen={!!deletingPost}
+        onClose={() => setDeletingPost(null)}
+        onConfirm={handleConfirmDelete}
+        postTitle={deletingPost?.title || ''}
+      />
     </div>
   );
 };
