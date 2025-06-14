@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -96,6 +97,12 @@ const Mural = () => {
     );
   }
 
+  // Função para obter o nome do usuário de forma segura
+  const getUserDisplayName = () => {
+    if (!user) return 'U';
+    return user.user_metadata?.name || user.email?.charAt(0).toUpperCase() || 'U';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -114,7 +121,7 @@ const Mural = () => {
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
-                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                    {getUserDisplayName().charAt(0)}
                   </div>
                   <Button
                     variant="outline"
