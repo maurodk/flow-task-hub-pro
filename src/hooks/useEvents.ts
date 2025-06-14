@@ -67,6 +67,35 @@ export const useEvents = () => {
     }
   };
 
+  const updateEvent = async (eventId: string, title: string, description: string, eventDate: string, eventTime: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para atualizar um evento');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({
+          title,
+          description,
+          event_date: eventDate,
+          event_time: eventTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', eventId)
+        .eq('created_by', user.id);
+
+      if (error) throw error;
+
+      toast.success('Evento atualizado com sucesso!');
+      fetchEvents();
+    } catch (error) {
+      console.error('Erro ao atualizar evento:', error);
+      toast.error('Erro ao atualizar evento');
+    }
+  };
+
   const deleteEvent = async (eventId: string) => {
     if (!user) {
       toast.error('Você precisa estar logado para excluir um evento');
@@ -98,6 +127,7 @@ export const useEvents = () => {
     events,
     loading,
     createEvent,
+    updateEvent,
     deleteEvent,
     fetchEvents
   };
