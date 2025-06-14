@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -65,6 +66,17 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
     }
     onClose();
   };
+
+  const handleTimeChange = (hour: string, minute: string) => {
+    setSelectedTime(`${hour}:${minute}`);
+  };
+
+  const formatTimeDisplay = (time: string) => {
+    if (!time) return 'Selecionar horário';
+    return time;
+  };
+
+  const [selectedHour, selectedMinute] = selectedTime.split(':');
 
   if (!event) return null;
 
@@ -131,18 +143,52 @@ const EditEventModal: React.FC<EditEventModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-time">Horário *</Label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="edit-time"
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <Label>Horário *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    <span>{formatTimeDisplay(selectedTime)}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4">
+                  <div className="flex space-x-2">
+                    <div className="flex flex-col space-y-2">
+                      <Label className="text-sm font-medium">Hora</Label>
+                      <Select value={selectedHour} onValueChange={(hour) => handleTimeChange(hour, selectedMinute || '00')}>
+                        <SelectTrigger className="w-16">
+                          <SelectValue placeholder="--" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                              {i.toString().padStart(2, '0')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col space-y-2">
+                      <Label className="text-sm font-medium">Min</Label>
+                      <Select value={selectedMinute} onValueChange={(minute) => handleTimeChange(selectedHour || '00', minute)}>
+                        <SelectTrigger className="w-16">
+                          <SelectValue placeholder="--" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 60 }, (_, i) => (
+                            <SelectItem key={i} value={i.toString().padStart(2, '0')}>
+                              {i.toString().padStart(2, '0')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
