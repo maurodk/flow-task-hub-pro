@@ -225,6 +225,42 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          attendees_count: number | null
+          created_at: string
+          created_by: string
+          description: string | null
+          event_date: string
+          event_time: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attendees_count?: number | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          event_date: string
+          event_time: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attendees_count?: number | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_date?: string
+          event_time?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mural_comments: {
         Row: {
           attachments: Json | null

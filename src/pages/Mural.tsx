@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Heart, Share2, Calendar, Users, Plus, PenTool, Paperclip } from 'lucide-react';
+import { MessageSquare, Heart, Share2, Plus, PenTool, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMural } from '@/hooks/useMural';
 import CreatePostModal from '@/components/mural/CreatePostModal';
@@ -12,6 +13,7 @@ import AttachmentViewer from '@/components/mural/AttachmentViewer';
 import PostActions from '@/components/mural/PostActions';
 import EditPostModal from '@/components/mural/EditPostModal';
 import DeletePostModal from '@/components/mural/DeletePostModal';
+import EventsSection from '@/components/mural/EventsSection';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -66,23 +68,6 @@ const Mural = () => {
       setDeletingPost(null);
     }
   };
-
-  const events = [
-    {
-      id: 1,
-      title: 'Workshop de React',
-      date: '15 de Fevereiro',
-      time: '14:00',
-      attendees: 23,
-    },
-    {
-      id: 2,
-      title: 'Apresentação de Resultados',
-      date: '18 de Fevereiro',
-      time: '10:00',
-      attendees: 45,
-    },
-  ];
 
   if (loading) {
     return (
@@ -290,27 +275,8 @@ const Mural = () => {
 
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Próximos eventos */}
-            <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-                  <Calendar className="h-5 w-5" />
-                  Próximos Eventos
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {events.map((event) => (
-                  <div key={event.id} className="border-l-4 border-blue-500 pl-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{event.title}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{event.date} às {event.time}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
-                      <Users className="h-3 w-3" />
-                      {event.attendees} participantes
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            {/* Próximos eventos interativos */}
+            <EventsSection />
 
             {/* Atividade recente */}
             <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
