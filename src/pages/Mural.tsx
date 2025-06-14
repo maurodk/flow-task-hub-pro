@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Heart, Share2, Calendar, Users } from 'lucide-react';
+import { MessageSquare, Heart, Share2, Calendar, Users, Plus, PenTool, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMural } from '@/hooks/useMural';
-import CreatePostForm from '@/components/mural/CreatePostForm';
+import CreatePostModal from '@/components/mural/CreatePostModal';
 import CommentSection from '@/components/mural/CommentSection';
 import AttachmentViewer from '@/components/mural/AttachmentViewer';
 import PostActions from '@/components/mural/PostActions';
@@ -32,6 +32,7 @@ const Mural = () => {
     deletePost
   } = useMural();
 
+  const [createPostOpen, setCreatePostOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [deletingPost, setDeletingPost] = useState<any>(null);
 
@@ -108,7 +109,42 @@ const Mural = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Posts principais */}
           <div className="lg:col-span-3 space-y-6">
-            <CreatePostForm onSubmit={createPost} userActivities={userActivities} />
+            {/* Botão minimalista para criar post */}
+            <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
+                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="flex-1 justify-start text-gray-500 dark:text-gray-400 h-12"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    <PenTool className="h-4 w-4 mr-2" />
+                    O que você gostaria de compartilhar?
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCreatePostOpen(true)}
+                      className="text-gray-500 dark:text-gray-400"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCreatePostOpen(true)}
+                      className="text-gray-500 dark:text-gray-400"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {posts.length === 0 ? (
               <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
@@ -285,6 +321,13 @@ const Mural = () => {
       </div>
 
       {/* Modais */}
+      <CreatePostModal
+        isOpen={createPostOpen}
+        onClose={() => setCreatePostOpen(false)}
+        onSubmit={createPost}
+        userActivities={userActivities}
+      />
+
       <EditPostModal
         post={editingPost}
         isOpen={!!editingPost}

@@ -1,0 +1,172 @@
+
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { X, Plus } from 'lucide-react';
+import FileUpload from './FileUpload';
+import SectorForm from '../activities/forms/SectorForm';
+
+interface CreatePostModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (title: string, content: string, activityIds: string[], sectorId?: string, files?: File[]) => void;
+  userActivities: {id: string; title: string}[];
+  loading?: boolean;
+}
+
+const CreatePostModal: React.FC<CreatePostModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  userActivities, 
+  loading = false 
+}) => {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([]);
+  const [selectedActivityId, setSelectedActivityId] = useState('');
+  const [selectedSectorId, setSelectedSectorId] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim() || !content.trim()) {
+      return;
+    }
+
+    onSubmit(title.trim(), content.trim(), selectedActivityIds, selectedSectorId || undefined, files);
+    
+    // Reset form
+    setTitle('');
+    setContent('');
+    setSelectedActivityIds([]);
+    setSelectedActivityId('');
+    setSelectedSectorId('');
+    setFiles([]);
+    onClose();
+  };
+
+  const addActivity = () => {
+    if (selectedActivityId && !selectedActivityIds.includes(selectedActivityId)) {
+      setSelectedActivityIds([...selectedActivityIds, selectedActivityId]);
+      setSelectedActivityId('');
+    }
+  };
+
+  const removeActivity = (activityIdToRemove: string) => {
+    setSelectedActivityIds(selectedActivityIds.filter(id => id !== activityIdToRemove));
+  };
+
+  const getActivityTitle = (activityId: string) => {
+    return userActivities.find(activity => activity.id === activityId)?.title || 'Atividade';
+  };
+
+  const handleClose = () => {
+    setTitle('');
+    setContent('');
+    setSelectedActivityIds([]);
+    setSelectedActivityId('');
+    setSelectedSectorId('');
+    setFiles([]);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Criar Nova Publicação</DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Input
+              placeholder="Título da publicação..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div>
+            <Textarea
+              placeholder="Escreva sua publicação..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={4}
+              required
+            />
+          </div>
+
+          <SectorForm 
+            value={selectedSectorId} 
+            onChange={setSelectedSectorId} 
+          />
+
+          <div>
+            <div className="flex gap-2 mb-2">
+              <Select value={selectedActivityId} onValueChange={setSelectedActivityId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecionar atividade relacionada..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {userActivities.map((activity) => (
+                    <SelectItem key={activity.id} value={activity.id}>
+                      {activity.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addActivity}
+                disabled={!selectedActivityId || selectedActivityIds.includes(selectedActivityId)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {selectedActivityIds.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedActivityIds.map((activityId) => (
+                  <Badge key={activityId} variant="secondary" className="flex items-center gap-1">
+                    {getActivityTitle(activityId)}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => removeActivity(activityId)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <FileUpload files={files} onFilesChange={setFiles} />
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || !title.trim() || !content.trim()}>
+              {loading ? 'Publicando...' : 'Publicar'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default CreatePostModal;
