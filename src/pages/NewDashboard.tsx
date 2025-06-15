@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
@@ -7,8 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } from 'lucide-react';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 
 interface Activity {
   id: string;
@@ -76,7 +76,7 @@ const NewDashboard = () => {
       const typedActivities: Activity[] = (data || []).map(activity => ({
         id: activity.id,
         title: activity.title,
-        status: activity.status as 'pending' | 'in_progress' | 'completed' | 'on_hold',
+        status: (activity.status === 'on_hold' ? 'pending' : activity.status) as 'pending' | 'in_progress' | 'completed',
         priority: activity.priority as 'low' | 'medium' | 'high',
         progress: activity.progress || 0,
         created_at: activity.created_at,
@@ -108,16 +108,30 @@ const NewDashboard = () => {
     { name: 'Em Espera', value: onHoldActivities, color: '#f59e0b' },
   ];
 
+  const priorityChartConfig = {
+    alta: { label: "Alta", color: "hsl(0 84.2% 60.2%)" },
+    media: { label: "Média", color: "hsl(47.9 95.8% 53.1%)" },
+    baixa: { label: "Baixa", color: "hsl(142.1 76.2% 36.3%)" },
+    value: { label: "Quantidade" }
+  } satisfies ChartConfig;
+  
   const priorityData = [
-    { name: 'Alta', value: activities.filter(a => a.priority === 'high').length },
-    { name: 'Média', value: activities.filter(a => a.priority === 'medium').length },
-    { name: 'Baixa', value: activities.filter(a => a.priority === 'low').length },
+    { name: 'Alta', value: activities.filter(a => a.priority === 'high').length, fill: "var(--color-alta)" },
+    { name: 'Média', value: activities.filter(a => a.priority === 'medium').length, fill: "var(--color-media)" },
+    { name: 'Baixa', value: activities.filter(a => a.priority === 'low').length, fill: "var(--color-baixa)" },
   ];
 
+  const typeChartConfig = {
+    value: { label: "Atividades" },
+    standard: { label: "Padrão", color: "hsl(var(--chart-1))" },
+    template_based: { label: "Predefinida", color: "hsl(var(--chart-2))" },
+    recurring: { label: "Repetitiva", color: "hsl(var(--chart-3))" },
+  } satisfies ChartConfig;
+
   const typeData = [
-    { name: 'Padrão', value: activities.filter(a => a.activity_type === 'standard').length },
-    { name: 'Predefinida', value: activities.filter(a => a.activity_type === 'template_based').length },
-    { name: 'Repetitiva', value: activities.filter(a => a.activity_type === 'recurring').length },
+    { name: 'Padrão', value: activities.filter(a => a.activity_type === 'standard').length, fill: 'var(--color-standard)' },
+    { name: 'Predefinida', value: activities.filter(a => a.activity_type === 'template_based').length, fill: 'var(--color-template_based)' },
+    { name: 'Repetitiva', value: activities.filter(a => a.activity_type === 'recurring').length, fill: 'var(--color-recurring)' },
   ];
 
   const averageProgress = activities.length > 0 
@@ -139,8 +153,6 @@ const NewDashboard = () => {
         return <Activity className="h-4 w-4 text-blue-500" />;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'on_hold':
-        return <Pause className="h-4 w-4 text-yellow-500" />;
       default:
         return <Calendar className="h-4 w-4" />;
     }
@@ -194,7 +206,7 @@ const NewDashboard = () => {
         </div>
 
         {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -236,17 +248,6 @@ const NewDashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{completedActivities}</div>
               <p className="text-xs text-muted-foreground">finalizadas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Em Espera</CardTitle>
-              <Pause className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{onHoldActivities}</div>
-              <p className="text-xs text-muted-foreground">pausadas</p>
             </CardContent>
           </Card>
         </div>
@@ -300,17 +301,35 @@ const NewDashboard = () => {
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Distribuição por Prioridade</CardTitle>
+              <CardDescription>Quantidade de atividades por nível de prioridade.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={priorityData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" />
+              <ChartContainer config={priorityChartConfig} className="min-h-[200px] w-full">
+                <BarChart accessibilityLayer data={priorityData} layout="vertical" margin={{ left: 10 }}>
+                    <CartesianGrid horizontal={false} />
+                    <YAxis
+                        dataKey="name"
+                        type="category"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                    />
+                    <XAxis dataKey="value" type="number" hide />
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="line" hideLabel />}
+                    />
+                    <Bar dataKey="value" layout="vertical" radius={5}>
+                        <LabelList
+                            dataKey="value"
+                            position="right"
+                            offset={8}
+                            className="fill-foreground"
+                            fontSize={12}
+                        />
+                    </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
         </div>
@@ -396,16 +415,37 @@ const NewDashboard = () => {
               <CardTitle>Tipos de Atividades</CardTitle>
               <CardDescription>Distribuição por tipo de atividade</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={typeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#8b5cf6" />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent className="flex-1 pb-0">
+                <ChartContainer
+                    config={typeChartConfig}
+                    className="mx-auto aspect-square max-h-[300px]"
+                >
+                    <PieChart>
+                        <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Pie
+                            data={typeData}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={60}
+                            strokeWidth={5}
+                        >
+                            <LabelList
+                                dataKey="value"
+                                className="fill-background"
+                                stroke="none"
+                                fontSize={12}
+                                formatter={(value: number) => totalActivities > 0 ? `${((value / totalActivities) * 100).toFixed(0)}%` : '0%'}
+                            />
+                        </Pie>
+                        <ChartLegend
+                            content={<ChartLegendContent nameKey="name" />}
+                            className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                        />
+                    </PieChart>
+                </ChartContainer>
             </CardContent>
           </Card>
         </div>
