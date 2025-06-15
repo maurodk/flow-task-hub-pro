@@ -4,7 +4,7 @@ import { FileText, Repeat, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
-import { Tooltip } from "@radix-ui/react-tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const TYPE_CONFIG = {
   standard: {
@@ -95,20 +95,20 @@ export const ActivityTypeCardGrid: React.FC<Props> = ({ data, total }) => {
                 </div>
               </div>
               {/* Tooltip informação extra */}
-              <Tooltip.Root>
-                <Tooltip.Trigger asChild>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <span className="text-xs underline decoration-dotted text-muted-foreground cursor-help">
                     Ver detalhes
                   </span>
-                </Tooltip.Trigger>
-                <Tooltip.Content side="top" className="z-30 px-3 py-2 rounded-md bg-white dark:bg-slate-900 border text-xs shadow-xl">
+                </TooltipTrigger>
+                <TooltipContent side="top" className="z-30 px-3 py-2 rounded-md bg-white dark:bg-slate-900 border text-xs shadow-xl">
                   <span>
                     {Conf.label}: <b>{c.value}</b> atividade{c.value !== 1 ? "s" : ""}
                     <br />
                     Isso representa <b>{c.percent}%</b> do total.
                   </span>
-                </Tooltip.Content>
-              </Tooltip.Root>
+                </TooltipContent>
+              </Tooltip>
             </div>
             {/* Detalhes expandidos */}
             <AnimatePresence>
