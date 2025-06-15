@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -63,20 +62,35 @@ export const useEvents = () => {
 
   const fetchEventParticipants = async (eventId: string): Promise<EventParticipant[]> => {
     try {
-      const { data, error } = await supabase
+      // Primeiro buscar os participantes
+      const { data: participantsData, error: participantsError } = await supabase
         .from('event_participants')
-        .select(`
-          *,
-          profiles!event_participants_user_id_fkey (
-            name,
-            email,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('event_id', eventId);
 
-      if (error) throw error;
-      return data || [];
+      if (participantsError) throw participantsError;
+
+      if (!participantsData || participantsData.length === 0) {
+        return [];
+      }
+
+      // Buscar os perfis dos participantes
+      const userIds = participantsData.map(p => p.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combinar os dados
+      const participants: EventParticipant[] = participantsData.map(participant => ({
+        ...participant,
+        status: participant.status as 'pending' | 'confirmed' | 'declined',
+        profiles: profilesData?.find(profile => profile.id === participant.user_id)
+      }));
+
+      return participants;
     } catch (error) {
       console.error('Erro ao buscar participantes:', error);
       toast.error('Erro ao carregar participantes');
