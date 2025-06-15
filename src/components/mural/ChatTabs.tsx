@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Hash, Users, MessageCircle, ChevronDown } from 'lucide-react';
+import { Plus, Hash, Users, MessageCircle, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { useSectors } from '@/hooks/useSectors';
 import { useChatRooms, ChatRoom } from '@/hooks/useChatRooms';
 import ChatRoomContextMenu from './ChatRoomContextMenu';
@@ -25,7 +25,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
   children
 }) => {
   const { sectors } = useSectors();
-  const { chatRooms, updateChatRoom, deleteChatRoom } = useChatRooms();
+  const { chatRooms, updateChatRoom, deleteChatRoom, loading } = useChatRooms();
   
   // Estados para modais e confirmações
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -57,16 +57,19 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
 
   // Handlers para o Context Menu
   const handleEditChat = (chatRoom: ChatRoom) => {
+    console.log('Editing chat room:', chatRoom);
     setSelectedChatRoom(chatRoom);
     setEditModalOpen(true);
   };
 
   const handleArchiveChat = (chatRoom: ChatRoom) => {
+    console.log('Archiving chat room:', chatRoom);
     setChatToArchive(chatRoom);
     setArchiveDialogOpen(true);
   };
 
   const handleDeleteChat = (chatRoom: ChatRoom) => {
+    console.log('Deleting chat room:', chatRoom);
     setChatToDelete(chatRoom);
     setDeleteDialogOpen(true);
   };
@@ -192,28 +195,52 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {chatRooms.map((room) => (
-                <ChatRoomContextMenu
-                  key={room.id}
-                  chatRoom={room}
-                  onEdit={handleEditChat}
-                  onArchive={handleArchiveChat}
-                  onDelete={handleDeleteChat}
-                >
-                  <DropdownMenuItem
-                    onClick={() => onTabChange(`room-${room.id}`)}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Hash className="h-4 w-4" />
-                    {room.name}
-                    {activeTab === `room-${room.id}` && (
-                      <div className="ml-auto h-2 w-2 bg-purple-500 rounded-full" />
-                    )}
-                  </DropdownMenuItem>
-                </ChatRoomContextMenu>
-              ))}
-              {chatRooms.length > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuContent align="start" className="w-64">
+              {loading ? (
+                <DropdownMenuItem disabled className="text-sm text-gray-500">
+                  Carregando chats...
+                </DropdownMenuItem>
+              ) : chatRooms.length > 0 ? (
+                <>
+                  {chatRooms.map((room) => (
+                    <div key={room.id} className="group relative">
+                      <ChatRoomContextMenu
+                        chatRoom={room}
+                        onEdit={handleEditChat}
+                        onArchive={handleArchiveChat}
+                        onDelete={handleDeleteChat}
+                      >
+                        <DropdownMenuItem
+                          onClick={() => onTabChange(`room-${room.id}`)}
+                          className="flex items-center gap-2 cursor-pointer pr-8"
+                        >
+                          <Hash className="h-4 w-4" />
+                          <div className="flex-1 min-w-0">
+                            <div className="truncate">{room.name}</div>
+                            {room.description && (
+                              <div className="text-xs text-gray-500 truncate">
+                                {room.description}
+                              </div>
+                            )}
+                          </div>
+                          {activeTab === `room-${room.id}` && (
+                            <div className="ml-auto h-2 w-2 bg-purple-500 rounded-full" />
+                          )}
+                        </DropdownMenuItem>
+                      </ChatRoomContextMenu>
+                      {/* Indicador visual de que há ações disponíveis */}
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal className="h-3 w-3 text-gray-400" />
+                      </div>
+                    </div>
+                  ))}
+                  <DropdownMenuSeparator />
+                </>
+              ) : (
+                <DropdownMenuItem disabled className="text-sm text-gray-500">
+                  Nenhum chat personalizado
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={onCreateChatRoom}
                 className="flex items-center gap-2 cursor-pointer text-blue-600 dark:text-blue-400"
@@ -221,14 +248,16 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
                 <Plus className="h-4 w-4" />
                 Criar Novo Chat
               </DropdownMenuItem>
-              {chatRooms.length === 0 && (
-                <DropdownMenuItem disabled className="text-sm text-gray-500">
-                  Nenhum chat personalizado
-                </DropdownMenuItem>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        
+        {/* Dica visual sobre o context menu */}
+        {chatRooms.length > 0 && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            💡 Dica: Clique com o botão direito nos chats para editá-los ou arquivá-los
+          </div>
+        )}
       </div>
 
       {/* Conteúdo das abas - mantém a mesma estrutura */}
