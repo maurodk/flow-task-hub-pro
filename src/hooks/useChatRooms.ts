@@ -18,18 +18,33 @@ export const useChatRooms = () => {
   const [archivedChatRooms, setArchivedChatRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingArchived, setLoadingArchived] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Força re-fetch
 
-  const fetchChatRooms = async () => {
-    if (!user?.id) return;
+  const fetchChatRooms = async (forceFetch = false) => {
+    if (!user?.id) {
+      console.log('[useChatRooms] No user found, skipping fetch');
+      return;
+    }
     
     try {
       setLoading(true);
-      console.log('Starting to fetch active chat rooms...');
+      console.log('[useChatRooms] Starting to fetch active chat rooms...', { 
+        userId: user.id, 
+        forceFetch,
+        refreshKey 
+      });
+      
       const activeChatRooms = await fetchChatRoomsWithSectors(true, user.id);
-      console.log('Setting active chat rooms:', activeChatRooms);
+      
+      console.log('[useChatRooms] Fetched active chat rooms:', {
+        count: activeChatRooms.length,
+        rooms: activeChatRooms.map(r => ({ id: r.id, name: r.name, created_by: r.created_by }))
+      });
+      
       setChatRooms(activeChatRooms);
+      console.log('[useChatRooms] State updated with active chat rooms');
     } catch (error) {
-      console.error('Error fetching active chat rooms:', error);
+      console.error('[useChatRooms] Error fetching active chat rooms:', error);
       toast.error('Erro ao carregar chats ativos');
       setChatRooms([]);
     } finally {
@@ -42,10 +57,12 @@ export const useChatRooms = () => {
     
     try {
       setLoadingArchived(true);
+      console.log('[useChatRooms] Fetching archived chat rooms...');
       const archived = await fetchChatRoomsWithSectors(false, user.id);
+      console.log('[useChatRooms] Fetched archived chat rooms:', archived.length);
       setArchivedChatRooms(archived);
     } catch (error) {
-      console.error('Error fetching archived chat rooms:', error);
+      console.error('[useChatRooms] Error fetching archived chat rooms:', error);
       toast.error('Erro ao carregar chats arquivados');
       setArchivedChatRooms([]);
     } finally {
@@ -53,15 +70,24 @@ export const useChatRooms = () => {
     }
   };
 
+  const forceRefresh = () => {
+    console.log('[useChatRooms] Force refresh triggered');
+    setRefreshKey(prev => prev + 1);
+  };
+
   const createChatRoom = async (name: string, description: string, sectorIds: string[]) => {
     if (!user?.id) return;
     
     try {
+      console.log('[useChatRooms] Creating chat room:', { name, description, sectorIds });
       await createChatRoomOperation(name, description, sectorIds, user.id);
-      console.log('Refreshing chat rooms after creation...');
-      await fetchChatRooms();
+      console.log('[useChatRooms] Chat room created successfully, refreshing...');
+      
+      // Força uma atualização completa
+      await fetchChatRooms(true);
+      toast.success('Chat criado com sucesso!');
     } catch (error) {
-      // Error already handled in operation
+      console.error('[useChatRooms] Error creating chat room:', error);
       throw error;
     }
   };
@@ -70,11 +96,12 @@ export const useChatRooms = () => {
     if (!user?.id) return;
     
     try {
+      console.log('[useChatRooms] Updating chat room:', roomId);
       await updateChatRoomOperation(roomId, name, description, sectorIds, user.id);
-      console.log('Refreshing chat rooms after update...');
-      await fetchChatRooms();
+      console.log('[useChatRooms] Chat room updated, refreshing...');
+      await fetchChatRooms(true);
     } catch (error) {
-      // Error already handled in operation
+      console.error('[useChatRooms] Error updating chat room:', error);
     }
   };
 
@@ -82,12 +109,13 @@ export const useChatRooms = () => {
     if (!user?.id) return;
     
     try {
+      console.log('[useChatRooms] Archiving chat room:', roomId);
       await archiveChatRoomOperation(roomId, user.id);
-      console.log('Refreshing chat rooms after archiving...');
-      await fetchChatRooms();
+      console.log('[useChatRooms] Chat room archived, refreshing...');
+      await fetchChatRooms(true);
       await fetchArchivedChatRooms();
     } catch (error) {
-      // Error already handled in operation
+      console.error('[useChatRooms] Error archiving chat room:', error);
     }
   };
 
@@ -95,12 +123,13 @@ export const useChatRooms = () => {
     if (!user?.id) return;
     
     try {
+      console.log('[useChatRooms] Restoring chat room:', roomId);
       await restoreChatRoomOperation(roomId, user.id);
-      console.log('Refreshing chat rooms after restoration...');
-      await fetchChatRooms();
+      console.log('[useChatRooms] Chat room restored, refreshing...');
+      await fetchChatRooms(true);
       await fetchArchivedChatRooms();
     } catch (error) {
-      // Error already handled in operation
+      console.error('[useChatRooms] Error restoring chat room:', error);
     }
   };
 
@@ -108,18 +137,28 @@ export const useChatRooms = () => {
     if (!user?.id) return;
     
     try {
+      console.log('[useChatRooms] Deleting chat room:', roomId);
       await deleteChatRoomOperation(roomId, user.id);
-      console.log('Refreshing chat rooms after deletion...');
-      await fetchChatRooms();
+      console.log('[useChatRooms] Chat room deleted, refreshing...');
+      await fetchChatRooms(true);
       await fetchArchivedChatRooms();
     } catch (error) {
-      // Error already handled in operation
+      console.error('[useChatRooms] Error deleting chat room:', error);
     }
   };
 
   useEffect(() => {
+    console.log('[useChatRooms] useEffect triggered with:', { userId: user?.id, refreshKey });
     fetchChatRooms();
-  }, [user?.id]);
+  }, [user?.id, refreshKey]);
+
+  // Log sempre que o estado chatRooms mudar
+  useEffect(() => {
+    console.log('[useChatRooms] chatRooms state changed:', {
+      count: chatRooms.length,
+      rooms: chatRooms.map(r => ({ id: r.id, name: r.name }))
+    });
+  }, [chatRooms]);
 
   return {
     chatRooms,
@@ -132,7 +171,8 @@ export const useChatRooms = () => {
     restoreChatRoom,
     deleteChatRoom,
     fetchChatRooms,
-    fetchArchivedChatRooms
+    fetchArchivedChatRooms,
+    forceRefresh, // Nova função para forçar refresh
   };
 };
 

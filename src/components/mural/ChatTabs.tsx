@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Hash, Users, MessageCircle, ChevronDown, MoreHorizontal, Archive, RotateCcw } from 'lucide-react';
+import { Plus, Hash, Users, MessageCircle, ChevronDown, MoreHorizontal, Archive, RotateCcw, RefreshCw } from 'lucide-react';
 import { useSectors } from '@/hooks/useSectors';
 import { useChatRooms, ChatRoom } from '@/hooks/useChatRooms';
 import ChatRoomContextMenu from './ChatRoomContextMenu';
@@ -34,7 +34,8 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
     deleteChatRoom, 
     loading,
     loadingArchived,
-    fetchArchivedChatRooms
+    fetchArchivedChatRooms,
+    forceRefresh
   } = useChatRooms();
   
   // Estados para modais e confirmações
@@ -69,28 +70,35 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
 
   // Handlers para o Context Menu dos chats ativos
   const handleEditChat = (chatRoom: ChatRoom) => {
-    console.log('Editing chat room:', chatRoom);
+    console.log('[ChatTabs] Editing chat room:', chatRoom);
     setSelectedChatRoom(chatRoom);
     setEditModalOpen(true);
   };
 
   const handleArchiveChat = (chatRoom: ChatRoom) => {
-    console.log('Archiving chat room:', chatRoom);
+    console.log('[ChatTabs] Archiving chat room:', chatRoom);
     setChatToArchive(chatRoom);
     setArchiveDialogOpen(true);
   };
 
   // Handlers para o Context Menu dos chats arquivados
   const handleRestoreChat = (chatRoom: ChatRoom) => {
-    console.log('Restoring chat room:', chatRoom);
+    console.log('[ChatTabs] Restoring chat room:', chatRoom);
     setChatToRestore(chatRoom);
     setRestoreDialogOpen(true);
   };
 
   const handleDeleteChatPermanently = (chatRoom: ChatRoom) => {
-    console.log('Permanently deleting chat room:', chatRoom);
+    console.log('[ChatTabs] Permanently deleting chat room:', chatRoom);
     setChatToDelete(chatRoom);
     setDeleteDialogOpen(true);
+  };
+
+  // Função para refresh manual
+  const handleManualRefresh = () => {
+    console.log('[ChatTabs] Manual refresh triggered');
+    forceRefresh();
+    toast.info('Atualizando chats...');
   };
 
   // Confirmação de arquivamento
@@ -103,7 +111,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           onTabChange('geral');
         }
       } catch (error) {
-        console.error('Error archiving chat:', error);
+        console.error('[ChatTabs] Error archiving chat:', error);
       }
     }
     setArchiveDialogOpen(false);
@@ -116,7 +124,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
       try {
         await restoreChatRoom(chatToRestore.id);
       } catch (error) {
-        console.error('Error restoring chat:', error);
+        console.error('[ChatTabs] Error restoring chat:', error);
       }
     }
     setRestoreDialogOpen(false);
@@ -133,7 +141,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           onTabChange('geral');
         }
       } catch (error) {
-        console.error('Error deleting chat:', error);
+        console.error('[ChatTabs] Error deleting chat:', error);
       }
     }
     setDeleteDialogOpen(false);
@@ -152,6 +160,14 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
     }
   };
 
+  // Log para debug do estado dos chatRooms
+  console.log('[ChatTabs] Current state:', {
+    chatRoomsCount: chatRooms.length,
+    loading,
+    activeTab,
+    chatRooms: chatRooms.map(r => ({ id: r.id, name: r.name }))
+  });
+
   return (
     <div className="w-full">
       <div className="border-b border-gray-200 dark:border-slate-700 mb-6">
@@ -159,14 +175,26 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Discussões por Área
           </h2>
-          <Button
-            onClick={onCreateChatRoom}
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Criar Chat
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleManualRefresh}
+              size="sm"
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Button
+              onClick={onCreateChatRoom}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Criar Chat
+            </Button>
+          </div>
         </div>
         
         {/* Nova estrutura horizontal com quatro dropdowns/botões */}
@@ -227,6 +255,11 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
               >
                 <Hash className="h-4 w-4" />
                 {getSelectedChatName()}
+                {chatRooms.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full">
+                    {chatRooms.length}
+                  </span>
+                )}
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
@@ -347,12 +380,16 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           </DropdownMenu>
         </div>
         
-        {/* Dica visual sobre o context menu */}
-        {(chatRooms.length > 0 || archivedChatRooms.length > 0) && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            💡 Dica: Clique com o botão direito nos chats para acessar opções adicionais
+        {/* Dica visual sobre o context menu e status de debug */}
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-1">
+          {(chatRooms.length > 0 || archivedChatRooms.length > 0) && (
+            <div>💡 Dica: Clique com o botão direito nos chats para acessar opções adicionais</div>
+          )}
+          {/* Status de debug para desenvolvimento */}
+          <div className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs">
+            Debug: {chatRooms.length} chats ativos | Loading: {loading.toString()} | User Admin: {true}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Conteúdo das abas - mantém a mesma estrutura */}
