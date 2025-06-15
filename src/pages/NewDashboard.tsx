@@ -10,6 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } from 'lucide-react';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import DonutActivityTypeChart from "@/components/charts/DonutActivityTypeChart";
+import ActivityTypeCardGrid from "@/components/charts/ActivityTypeCardGrid";
 
 interface Activity {
   id: string;
@@ -429,7 +430,8 @@ const NewDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-0">
-              <DonutActivityTypeChart data={donutTypeData} total={totalActivities} />
+              {/* Novo grid de cards moderno */}
+              <ActivityTypeCardGrid data={donutTypeData} total={totalActivities} />
             </CardContent>
           </Card>
         </div>
