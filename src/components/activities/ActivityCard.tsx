@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Trash2, Calendar, CheckCircle, Clock, Pause, Activity } from 'lucide-react';
+import { Edit, Trash2, Calendar, CheckCircle, Clock, Activity } from 'lucide-react';
 import { ActivityData } from '@/types/activity';
 
 interface ActivityCardProps {
@@ -26,7 +26,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       case 'pending': return <Clock className="h-4 w-4 text-gray-500" />;
       case 'in_progress': return <Activity className="h-4 w-4 text-blue-500" />;
       case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'on_hold': return <Pause className="h-4 w-4 text-yellow-500" />;
       default: return <Calendar className="h-4 w-4" />;
     }
   };
@@ -36,7 +35,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       pending: 'Pendente',
       in_progress: 'Em Progresso',
       completed: 'Concluída',
-      on_hold: 'Em Espera',
     };
     return labels[status as keyof typeof labels] || status;
   };

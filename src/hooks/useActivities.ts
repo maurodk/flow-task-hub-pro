@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
@@ -62,7 +63,8 @@ export const useActivities = () => {
 
       const formattedActivities = data?.map(activity => ({
         ...activity,
-        status: activity.status as 'pending' | 'in_progress' | 'completed' | 'on_hold',
+        // Converter "on_hold" para "pending" para manter compatibilidade
+        status: activity.status === 'on_hold' ? 'pending' : activity.status as 'pending' | 'in_progress' | 'completed',
         priority: activity.priority as 'low' | 'medium' | 'high',
         activity_type: activity.activity_type as 'standard' | 'template_based' | 'recurring',
         subtasks: activity.activity_subtasks?.sort((a: any, b: any) => a.order_index - b.order_index) || [],

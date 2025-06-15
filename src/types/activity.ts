@@ -3,7 +3,7 @@ export interface ActivityData {
   id: string;
   title: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'on_hold';
+  status: 'pending' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   due_date?: string;
   activity_type: 'standard' | 'template_based' | 'recurring';
@@ -25,7 +25,7 @@ export interface ActivityData {
 export interface ActivityFormData {
   title: string;
   description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'on_hold';
+  status: 'pending' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   due_date: string;
   activity_type: 'standard' | 'template_based' | 'recurring';

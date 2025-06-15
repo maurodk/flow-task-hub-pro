@@ -52,7 +52,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       setActivityForm({
         title: editingActivity.title,
         description: editingActivity.description || '',
-        status: editingActivity.status,
+        // Converter "on_hold" para "pending" se necessário
+        status: editingActivity.status === 'on_hold' ? 'pending' : editingActivity.status,
         priority: editingActivity.priority,
         due_date: editingActivity.due_date || '',
         activity_type: editingActivity.activity_type,

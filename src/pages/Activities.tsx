@@ -43,10 +43,9 @@ const Activities = () => {
     handleCloseDialog();
   };
 
-  // Filtrar atividades por status
+  // Filtrar atividades por status (removendo on_hold)
   const pendingActivities = activities.filter(activity => activity.status === 'pending');
   const inProgressActivities = activities.filter(activity => activity.status === 'in_progress');
-  const onHoldActivities = activities.filter(activity => activity.status === 'on_hold');
   const completedActivities = activities.filter(activity => activity.status === 'completed');
 
   if (loading) {
@@ -74,7 +73,7 @@ const Activities = () => {
           </div>
 
           <Tabs defaultValue="pending" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="pending" className="relative">
                 Pendentes
                 {pendingActivities.length > 0 && (
@@ -88,14 +87,6 @@ const Activities = () => {
                 {inProgressActivities.length > 0 && (
                   <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
                     {inProgressActivities.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="on_hold" className="relative">
-                Em Espera
-                {onHoldActivities.length > 0 && (
-                  <span className="ml-2 bg-orange-500 text-white text-xs rounded-full px-2 py-1">
-                    {onHoldActivities.length}
                   </span>
                 )}
               </TabsTrigger>
@@ -140,27 +131,6 @@ const Activities = () => {
                 isDialogOpen={isDialogOpen}
                 setIsDialogOpen={setIsDialogOpen}
                 title="Atividades Em Progresso"
-              >
-                <ActivityForm
-                  editingActivity={editingActivity}
-                  userTemplates={userTemplates}
-                  onSuccess={handleSuccess}
-                  onClose={handleCloseDialog}
-                  createActivity={createActivity}
-                />
-              </ActivityList>
-            </TabsContent>
-
-            <TabsContent value="on_hold">
-              <ActivityList
-                activities={onHoldActivities}
-                onEditActivity={handleEditActivity}
-                onDeleteActivity={deleteActivity}
-                onToggleSubtask={toggleSubtask}
-                onCreateNew={handleCreateNew}
-                isDialogOpen={isDialogOpen}
-                setIsDialogOpen={setIsDialogOpen}
-                title="Atividades Em Espera"
               >
                 <ActivityForm
                   editingActivity={editingActivity}

@@ -19,7 +19,7 @@ export const StatusPriorityForm: React.FC<StatusPriorityFormProps> = ({
         <Label htmlFor="status" className="text-gray-700 dark:text-gray-200">Status</Label>
         <Select 
           value={formData.status} 
-          onValueChange={(value: 'pending' | 'in_progress' | 'completed' | 'on_hold') => 
+          onValueChange={(value: 'pending' | 'in_progress' | 'completed') => 
             onFormChange({ status: value })
           }
         >
@@ -30,7 +30,6 @@ export const StatusPriorityForm: React.FC<StatusPriorityFormProps> = ({
             <SelectItem value="pending">Pendente</SelectItem>
             <SelectItem value="in_progress">Em Progresso</SelectItem>
             <SelectItem value="completed">Concluída</SelectItem>
-            <SelectItem value="on_hold">Em Espera</SelectItem>
           </SelectContent>
         </Select>
       </div>
