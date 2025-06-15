@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,8 +53,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
       setActivityForm({
         title: editingActivity.title,
         description: editingActivity.description || '',
-        // Converter "on_hold" para "pending" se necessário
-        status: editingActivity.status === 'on_hold' ? 'pending' : editingActivity.status,
+        status: editingActivity.status,
         priority: editingActivity.priority,
         due_date: editingActivity.due_date || '',
         activity_type: editingActivity.activity_type,
@@ -158,7 +158,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         recurrence_type: activityForm.is_recurring ? activityForm.recurrence_type || null : null,
         recurrence_time: null,
         template_id: activityForm.activity_type === 'template_based' ? activityForm.template_id || null : null,
-        sector_id: activityForm.sector_id || null, // FIX: Incluir sector_id
+        sector_id: activityForm.sector_id || null,
         next_due_at: nextDueAt?.toISOString() || null,
       };
 
