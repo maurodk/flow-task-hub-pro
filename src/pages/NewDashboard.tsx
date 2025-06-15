@@ -11,6 +11,8 @@ import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } fro
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import DonutActivityTypeChart from "@/components/charts/DonutActivityTypeChart";
 import ActivityTypeCardGrid from "@/components/charts/ActivityTypeCardGrid";
+import LineChartFilters from "@/components/charts/LineChartFilters";
+import { addDays, parseISO, isWithinInterval, startOfDay, subDays, startOfWeek, startOfMonth, format } from "date-fns";
 
 interface Activity {
   id: string;
@@ -191,50 +193,100 @@ const NewDashboard = () => {
     }
   };
 
+  // Filtros do LineChart
+  const [rangePreset, setRangePreset] = useState<"7d" | "30d" | "90d" | "180d" | "365d" | "custom">("30d");
+  const [customRange, setCustomRange] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
+  const [groupBy, setGroupBy] = useState<"daily" | "weekly" | "monthly">("daily");
+
   // --- Novo trecho: preparar dados do gráfico de linhas (não-cumulativo, por dia) ---
-  function buildLineChartData(activities: Activity[]) {
-    type DateMap = { [date: string]: { added: number; completed: number } };
-    const dateMap: DateMap = {};
+  function getRangeDates() {
+    const now = new Date();
+    if (rangePreset === "custom" && customRange[0] && customRange[1]) {
+      return [startOfDay(customRange[0]), startOfDay(customRange[1])];
+    }
+    if (rangePreset === "7d")    return [startOfDay(subDays(now, 6)), startOfDay(now)];
+    if (rangePreset === "30d")   return [startOfDay(subDays(now, 29)), startOfDay(now)];
+    if (rangePreset === "90d")   return [startOfDay(subDays(now, 89)), startOfDay(now)];
+    if (rangePreset === "180d")  return [startOfDay(subDays(now, 179)), startOfDay(now)];
+    if (rangePreset === "365d")  return [startOfDay(subDays(now, 364)), startOfDay(now)];
+    // default fallback
+    return [startOfDay(subDays(now, 29)), startOfDay(now)];
+  }
 
-    // Quantos foram adicionados/completados por dia
-    for (const a of activities) {
-      const created = a.created_at ? new Date(a.created_at).toISOString().slice(0, 10) : null;
-      if (created) {
-        if (!dateMap[created]) dateMap[created] = { added: 0, completed: 0 };
-        dateMap[created].added++;
+  // Função modificada para aceitar range e agrupamento
+  function buildLineChartData(activities: Activity[], start: Date, end: Date, group: "daily"|"weekly"|"monthly") {
+    const dateMap: { [key: string]: { added: number; completed: number } } = {};
+
+    // Pre-filtrar atividades por período desejado
+    const filtered = activities.filter(a => {
+      const created = a.created_at ? parseISO(a.created_at) : undefined;
+      return created && isWithinInterval(created, { start, end });
+    });
+
+    for (const a of filtered) {
+      let bucket: string;
+      const created = a.created_at ? parseISO(a.created_at) : undefined;
+      // Agrupamento
+      if (!created) continue;
+      if (group === "monthly") {
+        bucket = format(startOfMonth(created), "yyyy-MM");
+      } else if (group === "weekly") {
+        bucket = format(startOfWeek(created, { weekStartsOn: 1 }), "yyyy-ww");
+      } else {
+        bucket = format(created, "yyyy-MM-dd");
       }
-      if (a.status === 'completed') {
-        const completedDay = a.due_date
-          ? new Date(a.due_date).toISOString().slice(0, 10)
-          : (a.created_at ? new Date(a.created_at).toISOString().slice(0, 10) : null);
-        if (completedDay) {
-          if (!dateMap[completedDay]) dateMap[completedDay] = { added: 0, completed: 0 };
-          dateMap[completedDay].completed++;
+
+      if (!dateMap[bucket]) dateMap[bucket] = { added: 0, completed: 0 };
+      dateMap[bucket].added += 1;
+
+      if (a.status === "completed") {
+        // Data de conclusão = due_date ou fallback para created_at
+        const completedDate = a.due_date ? parseISO(a.due_date) : created;
+        let completeBucket: string;
+        if (group === "monthly") {
+          completeBucket = format(startOfMonth(completedDate), "yyyy-MM");
+        } else if (group === "weekly") {
+          completeBucket = format(startOfWeek(completedDate, { weekStartsOn: 1 }), "yyyy-ww");
+        } else {
+          completeBucket = format(completedDate, "yyyy-MM-dd");
         }
+        if (!dateMap[completeBucket]) dateMap[completeBucket] = { added: 0, completed: 0 };
+        dateMap[completeBucket].completed += 1;
       }
     }
 
-    // Ordena as datas (para evitar gaps, preencher zeros em dias sem eventos)
-    const allDatesSorted = Object.keys(dateMap).sort();
-    // Preencher dias faltantes entre o primeiro e o último
-    if (allDatesSorted.length > 1) {
-      const first = new Date(allDatesSorted[0]);
-      const last = new Date(allDatesSorted[allDatesSorted.length-1]);
-      for(let d = new Date(first); d <= last; d.setDate(d.getDate()+1)) {
-        const dateStr = d.toISOString().slice(0,10);
-        if (!dateMap[dateStr]) dateMap[dateStr] = { added: 0, completed: 0 };
+    // Normalizar buckets: preencher vazios
+    let buckets: string[] = [];
+    if (group === "monthly") {
+      let b = format(startOfMonth(start), "yyyy-MM");
+      let cur = startOfMonth(start);
+      while (cur <= end) {
+        buckets.push(format(cur, "yyyy-MM"));
+        cur = addDays(startOfMonth(addDays(cur, 32)), 0);
+      }
+    } else if (group === "weekly") {
+      let cur = startOfWeek(start, { weekStartsOn: 1 });
+      while (cur <= end) {
+        buckets.push(format(cur, "yyyy-ww"));
+        cur = addDays(cur, 7);
+      }
+    } else {
+      let cur = start;
+      while (cur <= end) {
+        buckets.push(format(cur, "yyyy-MM-dd"));
+        cur = addDays(cur, 1);
       }
     }
-    // Sort again after fill
-    const allDates = Object.keys(dateMap).sort();
-    return allDates.map(date => ({
-      date,
-      Adicionadas: dateMap[date].added,
-      Concluídas: dateMap[date].completed,
+
+    return buckets.map(bucket => ({
+      date: bucket,
+      Adicionadas: dateMap[bucket]?.added || 0,
+      Concluídas: dateMap[bucket]?.completed || 0
     }));
   }
 
-  const lineChartData = buildLineChartData(activities);
+  const [start, end] = getRangeDates();
+  const lineChartData = buildLineChartData(activities, start, end, groupBy);
 
   // --- Novo trecho: preparar dados do gráfico de escada (cumulative area chart) ---
   // Função para agrupar por dia, considerando created_at (adicionados) e completed (concluídas)
@@ -511,12 +563,25 @@ const NewDashboard = () => {
         <div className="mt-8">
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
-              <CardTitle>
-                Evolução de Atividades
-              </CardTitle>
-              <CardDescription>
-                Visualize a quantidade de atividades adicionadas e concluídas por dia.
-              </CardDescription>
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 w-full">
+                <div>
+                  <CardTitle>
+                    Evolução de Atividades
+                  </CardTitle>
+                  <CardDescription>
+                    Visualize a quantidade de atividades adicionadas e concluídas por {groupBy === "daily" ? "dia" : groupBy === "weekly" ? "semana" : "mês"} no período filtrado.
+                  </CardDescription>
+                </div>
+                {/* Filtros */}
+                <LineChartFilters
+                  rangePreset={rangePreset}
+                  onRangePreset={setRangePreset}
+                  customRange={customRange}
+                  onCustomRange={setCustomRange}
+                  groupBy={groupBy}
+                  onGroupBy={setGroupBy}
+                />
+              </div>
             </CardHeader>
             <CardContent className="pb-0">
               {lineChartData.length === 0 ? (
@@ -547,7 +612,13 @@ const NewDashboard = () => {
                           fontSize: 14,
                           border: "1px solid #e5e7eb"
                         }}
-                        labelFormatter={(value) => `Dia ${value.split('-').reverse().join('/')}`}
+                        labelFormatter={(value) => 
+                          groupBy === "daily"
+                            ? `Dia ${value.split("-").reverse().join("/")}`
+                            : groupBy === "weekly"
+                              ? `Semana ${value.substring(5)}/${value.substring(0,4)}`
+                              : `Mês ${value.substring(5)}/${value.substring(0,4)}`
+                        }
                         formatter={(value, name) => [`${value}`, name]}
                       />
                       <Line
@@ -557,14 +628,7 @@ const NewDashboard = () => {
                         strokeWidth={2.5}
                         dot={{ r: 4, fill: "#3b82f6", stroke: '#fff', strokeWidth: 1.5 }}
                         activeDot={{ r: 6, fill: "#60a5fa", stroke: "#3b82f6", strokeWidth: 2 }}
-                      >
-                        <LabelList
-                          dataKey="Adicionadas"
-                          position="top"
-                          className="fill-sky-700 text-xs"
-                          formatter={(v) => String(v)}
-                        />
-                      </Line>
+                      />
                       <Line
                         type="monotone"
                         dataKey="Concluídas"
@@ -573,14 +637,7 @@ const NewDashboard = () => {
                         strokeWidth={2.5}
                         dot={{ r: 4, fill: "#10b981", stroke: '#fff', strokeWidth: 1.5 }}
                         activeDot={{ r: 6, fill: "#3b9461", stroke: "#10b981", strokeWidth: 2 }}
-                      >
-                        <LabelList
-                          dataKey="Concluídas"
-                          position="top"
-                          className="fill-emerald-700 text-xs"
-                          formatter={(v) => String(v)}
-                        />
-                      </Line>
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
