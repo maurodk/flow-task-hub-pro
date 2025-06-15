@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } from 'lucide-react';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import DonutActivityTypeChart from "@/components/charts/DonutActivityTypeChart";
@@ -190,6 +190,51 @@ const NewDashboard = () => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
+
+  // --- Novo trecho: preparar dados do gráfico de linhas (não-cumulativo, por dia) ---
+  function buildLineChartData(activities: Activity[]) {
+    type DateMap = { [date: string]: { added: number; completed: number } };
+    const dateMap: DateMap = {};
+
+    // Quantos foram adicionados/completados por dia
+    for (const a of activities) {
+      const created = a.created_at ? new Date(a.created_at).toISOString().slice(0, 10) : null;
+      if (created) {
+        if (!dateMap[created]) dateMap[created] = { added: 0, completed: 0 };
+        dateMap[created].added++;
+      }
+      if (a.status === 'completed') {
+        const completedDay = a.due_date
+          ? new Date(a.due_date).toISOString().slice(0, 10)
+          : (a.created_at ? new Date(a.created_at).toISOString().slice(0, 10) : null);
+        if (completedDay) {
+          if (!dateMap[completedDay]) dateMap[completedDay] = { added: 0, completed: 0 };
+          dateMap[completedDay].completed++;
+        }
+      }
+    }
+
+    // Ordena as datas (para evitar gaps, preencher zeros em dias sem eventos)
+    const allDatesSorted = Object.keys(dateMap).sort();
+    // Preencher dias faltantes entre o primeiro e o último
+    if (allDatesSorted.length > 1) {
+      const first = new Date(allDatesSorted[0]);
+      const last = new Date(allDatesSorted[allDatesSorted.length-1]);
+      for(let d = new Date(first); d <= last; d.setDate(d.getDate()+1)) {
+        const dateStr = d.toISOString().slice(0,10);
+        if (!dateMap[dateStr]) dateMap[dateStr] = { added: 0, completed: 0 };
+      }
+    }
+    // Sort again after fill
+    const allDates = Object.keys(dateMap).sort();
+    return allDates.map(date => ({
+      date,
+      Adicionadas: dateMap[date].added,
+      Concluídas: dateMap[date].completed,
+    }));
+  }
+
+  const lineChartData = buildLineChartData(activities);
 
   // --- Novo trecho: preparar dados do gráfico de escada (cumulative area chart) ---
   // Função para agrupar por dia, considerando created_at (adicionados) e completed (concluídas)
@@ -470,37 +515,73 @@ const NewDashboard = () => {
                 Evolução de Atividades
               </CardTitle>
               <CardDescription>
-                Visualize como as atividades estão sendo adicionadas e concluídas ao longo do tempo.
+                Visualize a quantidade de atividades adicionadas e concluídas por dia.
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-0">
-              {stairChartData.length === 0 ? (
+              {lineChartData.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
                   Não há dados suficientes para exibir o gráfico.
                 </p>
               ) : (
                 <div className="w-full h-[340px] flex items-center">
                   <ResponsiveContainer width="100%" height="90%">
-                    <AreaChart data={stairChartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontSize: 13 }} />
-                      <YAxis tick={{ fontSize: 13 }} allowDecimals={false} />
-                      <Tooltip />
-                      <Area
+                    <LineChart data={lineChartData}>
+                      <CartesianGrid strokeDasharray="3 6" stroke="#e5e7eb" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 13 }}
+                        tickLine={false}
+                        axisLine={{ stroke: "#e5e7eb" }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 13 }}
+                        allowDecimals={false}
+                        axisLine={{ stroke: "#e5e7eb" }}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: 8,
+                          background: "rgba(255,255,255,0.94)",
+                          fontSize: 14,
+                          border: "1px solid #e5e7eb"
+                        }}
+                        labelFormatter={(value) => `Dia ${value.split('-').reverse().join('/')}`}
+                        formatter={(value, name) => [`${value}`, name]}
+                      />
+                      <Line
                         type="monotone"
                         dataKey="Adicionadas"
-                        stackId="1"
                         stroke="#3b82f6"
-                        fill="rgba(59,130,246,0.25)"
-                      />
-                      <Area
+                        strokeWidth={2.5}
+                        dot={{ r: 4, fill: "#3b82f6", stroke: '#fff', strokeWidth: 1.5 }}
+                        activeDot={{ r: 6, fill: "#60a5fa", stroke: "#3b82f6", strokeWidth: 2 }}
+                      >
+                        <LabelList
+                          dataKey="Adicionadas"
+                          position="top"
+                          className="fill-sky-700 text-xs"
+                          formatter={(v) => String(v)}
+                        />
+                      </Line>
+                      <Line
                         type="monotone"
                         dataKey="Concluídas"
-                        stackId="1"
                         stroke="#10b981"
-                        fill="rgba(16,185,129,0.25)"
-                      />
-                    </AreaChart>
+                        strokeDasharray="5 2"
+                        strokeWidth={2.5}
+                        dot={{ r: 4, fill: "#10b981", stroke: '#fff', strokeWidth: 1.5 }}
+                        activeDot={{ r: 6, fill: "#3b9461", stroke: "#10b981", strokeWidth: 2 }}
+                      >
+                        <LabelList
+                          dataKey="Concluídas"
+                          position="top"
+                          className="fill-emerald-700 text-xs"
+                          formatter={(v) => String(v)}
+                        />
+                      </Line>
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               )}
