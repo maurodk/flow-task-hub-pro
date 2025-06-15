@@ -80,11 +80,6 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
     setArchiveDialogOpen(true);
   };
 
-  const handleDeleteChatFromActive = (chatRoom: ChatRoom) => {
-    // Para chats ativos, primeiro arquivar
-    handleArchiveChat(chatRoom);
-  };
-
   // Handlers para o Context Menu dos chats arquivados
   const handleRestoreChat = (chatRoom: ChatRoom) => {
     console.log('Restoring chat room:', chatRoom);
@@ -248,7 +243,6 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
                         chatRoom={room}
                         onEdit={handleEditChat}
                         onArchive={handleArchiveChat}
-                        onDelete={handleDeleteChatFromActive}
                       >
                         <DropdownMenuItem
                           onClick={() => onTabChange(`room-${room.id}`)}

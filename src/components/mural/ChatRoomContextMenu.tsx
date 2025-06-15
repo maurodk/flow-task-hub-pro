@@ -7,14 +7,13 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { Edit, Archive, Trash2 } from 'lucide-react';
+import { Edit, Archive } from 'lucide-react';
 import { ChatRoom } from '@/hooks/useChatRooms';
 
 interface ChatRoomContextMenuProps {
   chatRoom: ChatRoom;
   onEdit: (chatRoom: ChatRoom) => void;
   onArchive: (chatRoom: ChatRoom) => void;
-  onDelete: (chatRoom: ChatRoom) => void;
   children: React.ReactNode;
 }
 
@@ -22,7 +21,6 @@ const ChatRoomContextMenu: React.FC<ChatRoomContextMenuProps> = ({
   chatRoom,
   onEdit,
   onArchive,
-  onDelete,
   children
 }) => {
   return (
@@ -47,14 +45,6 @@ const ChatRoomContextMenu: React.FC<ChatRoomContextMenuProps> = ({
         >
           <Archive className="h-4 w-4" />
           Arquivar Chat
-        </ContextMenuItem>
-        
-        <ContextMenuItem
-          onClick={() => onDelete(chatRoom)}
-          className="flex items-center gap-2 cursor-pointer text-red-600 dark:text-red-400"
-        >
-          <Trash2 className="h-4 w-4" />
-          Excluir Chat
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

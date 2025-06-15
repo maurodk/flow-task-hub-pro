@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -129,12 +128,32 @@ export const useChatRooms = () => {
 
   const createChatRoom = async (name: string, description: string, sectorIds: string[]) => {
     if (!user) {
+      console.error('No user found for chat room creation');
       toast.error('Você precisa estar logado para criar um chat');
       throw new Error('User not authenticated');
     }
 
     try {
       console.log('Creating chat room:', { name, description, sectorIds, userId: user.id });
+      console.log('User object:', user);
+
+      // Verificar se o usuário pode criar chat rooms
+      const { data: canCreateResult, error: canCreateError } = await supabase
+        .rpc('user_can_create_chat_room', { user_id: user.id });
+
+      if (canCreateError) {
+        console.error('Error checking user permissions:', canCreateError);
+        toast.error(`Erro ao verificar permissões: ${canCreateError.message}`);
+        throw canCreateError;
+      }
+
+      console.log('User can create chat room:', canCreateResult);
+
+      if (!canCreateResult) {
+        console.error('User does not have permission to create chat rooms');
+        toast.error('Você não tem permissão para criar chats');
+        throw new Error('User cannot create chat rooms');
+      }
 
       const { data: roomData, error: roomError } = await supabase
         .from('chat_rooms')
@@ -149,6 +168,7 @@ export const useChatRooms = () => {
 
       if (roomError) {
         console.error('Error creating chat room:', roomError);
+        console.error('Room error details:', JSON.stringify(roomError, null, 2));
         toast.error(`Erro ao criar chat: ${roomError.message}`);
         throw roomError;
       }
@@ -169,6 +189,7 @@ export const useChatRooms = () => {
 
         if (sectorsError) {
           console.error('Error associating sectors:', sectorsError);
+          console.error('Sectors error details:', JSON.stringify(sectorsError, null, 2));
           toast.error(`Erro ao vincular setores: ${sectorsError.message}`);
           throw sectorsError;
         }
@@ -184,6 +205,7 @@ export const useChatRooms = () => {
       return roomData;
     } catch (error) {
       console.error('Error in createChatRoom:', error);
+      console.error('Full error object:', JSON.stringify(error, null, 2));
       throw error;
     }
   };
