@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSectors } from '@/hooks/useSectors';
+import { toast } from 'sonner';
 
 interface CreateChatRoomModalProps {
   isOpen: boolean;
@@ -23,30 +24,52 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
   const [description, setDescription] = useState('');
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { sectors } = useSectors();
+  const { sectors, loading: sectorsLoading } = useSectors();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      toast.error('Nome do chat é obrigatório');
+      return;
+    }
+
+    if (trimmedName.length < 3) {
+      toast.error('Nome deve ter pelo menos 3 caracteres');
+      return;
+    }
+
+    if (trimmedName.length > 50) {
+      toast.error('Nome deve ter no máximo 50 caracteres');
       return;
     }
 
     setIsSubmitting(true);
     
     try {
-      console.log('Submitting chat room:', { name: name.trim(), description: description.trim(), selectedSectors });
+      console.log('Submitting chat room:', { 
+        name: trimmedName, 
+        description: description.trim(), 
+        selectedSectors 
+      });
       
-      await onSubmit(name.trim(), description.trim(), selectedSectors);
+      await onSubmit(trimmedName, description.trim(), selectedSectors);
       
       // Reset form only on success
       setName('');
       setDescription('');
       setSelectedSectors([]);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting chat room:', error);
-      // Don't close modal on error so user can retry
+      
+      // Show more specific error messages
+      if (error?.message) {
+        toast.error(`Erro ao criar chat: ${error.message}`);
+      } else {
+        toast.error('Erro inesperado ao criar chat. Tente novamente.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -89,7 +112,11 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
               onChange={(e) => setName(e.target.value)}
               required
               disabled={isSubmitting}
+              maxLength={50}
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {name.length}/50 caracteres
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -101,26 +128,40 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               disabled={isSubmitting}
+              maxLength={200}
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {description.length}/200 caracteres
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label>Setores com Acesso</Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {sectors.map((sector) => (
-                <div key={sector.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={sector.id}
-                    checked={selectedSectors.includes(sector.id)}
-                    onCheckedChange={() => handleSectorToggle(sector.id)}
-                    disabled={isSubmitting}
-                  />
-                  <Label htmlFor={sector.id} className="text-sm cursor-pointer">
-                    {sector.name}
-                  </Label>
-                </div>
-              ))}
-            </div>
+            {sectorsLoading ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Carregando setores...
+              </div>
+            ) : sectors.length === 0 ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Nenhum setor disponível
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {sectors.map((sector) => (
+                  <div key={sector.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={sector.id}
+                      checked={selectedSectors.includes(sector.id)}
+                      onCheckedChange={() => handleSectorToggle(sector.id)}
+                      disabled={isSubmitting}
+                    />
+                    <Label htmlFor={sector.id} className="text-sm cursor-pointer">
+                      {sector.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
             {selectedSectors.length === 0 && (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Sem setores selecionados = chat público para todos

@@ -25,6 +25,8 @@ export const useChatRooms = () => {
 
   const fetchChatRooms = async () => {
     if (!user) {
+      console.log('No user found, skipping chat rooms fetch');
+      setChatRooms([]);
       setLoading(false);
       return;
     }
@@ -44,14 +46,16 @@ export const useChatRooms = () => {
           )
         `)
         .eq('is_active', true)
-        .order('name');
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching chat rooms:', error);
-        throw error;
+        toast.error(`Erro ao carregar chats: ${error.message}`);
+        setChatRooms([]);
+        return;
       }
 
-      console.log('Chat rooms fetched:', data);
+      console.log('Chat rooms fetched successfully:', data);
 
       const roomsWithSectors = data?.map(room => ({
         ...room,
@@ -60,8 +64,9 @@ export const useChatRooms = () => {
 
       setChatRooms(roomsWithSectors);
     } catch (error) {
-      console.error('Erro ao buscar chat rooms:', error);
-      toast.error('Erro ao carregar chats');
+      console.error('Unexpected error fetching chat rooms:', error);
+      toast.error('Erro inesperado ao carregar chats');
+      setChatRooms([]);
     } finally {
       setLoading(false);
     }
@@ -70,37 +75,40 @@ export const useChatRooms = () => {
   const createChatRoom = async (name: string, description: string, sectorIds: string[]) => {
     if (!user) {
       toast.error('Você precisa estar logado para criar um chat');
-      return;
+      throw new Error('User not authenticated');
     }
 
     try {
       console.log('Creating chat room:', { name, description, sectorIds, userId: user.id });
 
+      // Criar o chat room
       const { data: roomData, error: roomError } = await supabase
         .from('chat_rooms')
         .insert({
-          name,
-          description,
-          created_by: user.id
+          name: name.trim(),
+          description: description.trim() || null,
+          created_by: user.id,
+          is_active: true
         })
         .select()
         .single();
 
       if (roomError) {
         console.error('Error creating chat room:', roomError);
+        toast.error(`Erro ao criar chat: ${roomError.message}`);
         throw roomError;
       }
 
-      console.log('Chat room created:', roomData);
+      console.log('Chat room created successfully:', roomData);
 
       // Vincular aos setores se houver
       if (sectorIds.length > 0) {
+        console.log('Associating sectors to chat room:', sectorIds);
+        
         const sectorInserts = sectorIds.map(sectorId => ({
           chat_room_id: roomData.id,
           sector_id: sectorId
         }));
-
-        console.log('Inserting sector associations:', sectorInserts);
 
         const { error: sectorsError } = await supabase
           .from('chat_room_sectors')
@@ -108,6 +116,7 @@ export const useChatRooms = () => {
 
         if (sectorsError) {
           console.error('Error associating sectors:', sectorsError);
+          toast.error(`Erro ao vincular setores: ${sectorsError.message}`);
           throw sectorsError;
         }
 
@@ -118,8 +127,7 @@ export const useChatRooms = () => {
       await fetchChatRooms();
       return roomData;
     } catch (error) {
-      console.error('Erro ao criar chat room:', error);
-      toast.error('Erro ao criar chat');
+      console.error('Error in createChatRoom:', error);
       throw error;
     }
   };
@@ -131,17 +139,22 @@ export const useChatRooms = () => {
     }
 
     try {
+      console.log('Updating chat room:', { roomId, name, description, sectorIds });
+
       const { error: roomError } = await supabase
         .from('chat_rooms')
         .update({
-          name,
-          description,
+          name: name.trim(),
+          description: description.trim() || null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', roomId)
-        .eq('created_by', user.id);
+        .eq('id', roomId);
 
-      if (roomError) throw roomError;
+      if (roomError) {
+        console.error('Error updating chat room:', roomError);
+        toast.error(`Erro ao atualizar chat: ${roomError.message}`);
+        throw roomError;
+      }
 
       // Remover vínculos existentes
       const { error: deleteError } = await supabase
@@ -149,7 +162,11 @@ export const useChatRooms = () => {
         .delete()
         .eq('chat_room_id', roomId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Error deleting existing sectors:', deleteError);
+        toast.error(`Erro ao remover setores: ${deleteError.message}`);
+        throw deleteError;
+      }
 
       // Adicionar novos vínculos
       if (sectorIds.length > 0) {
@@ -162,14 +179,17 @@ export const useChatRooms = () => {
           .from('chat_room_sectors')
           .insert(sectorInserts);
 
-        if (sectorsError) throw sectorsError;
+        if (sectorsError) {
+          console.error('Error inserting new sectors:', sectorsError);
+          toast.error(`Erro ao vincular novos setores: ${sectorsError.message}`);
+          throw sectorsError;
+        }
       }
 
       toast.success('Chat atualizado com sucesso!');
       await fetchChatRooms();
     } catch (error) {
-      console.error('Erro ao atualizar chat room:', error);
-      toast.error('Erro ao atualizar chat');
+      console.error('Error in updateChatRoom:', error);
     }
   };
 
@@ -180,25 +200,29 @@ export const useChatRooms = () => {
     }
 
     try {
+      console.log('Deleting chat room:', roomId);
+
       const { error } = await supabase
         .from('chat_rooms')
         .update({ is_active: false })
-        .eq('id', roomId)
-        .eq('created_by', user.id);
+        .eq('id', roomId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting chat room:', error);
+        toast.error(`Erro ao excluir chat: ${error.message}`);
+        throw error;
+      }
 
       toast.success('Chat excluído com sucesso!');
       await fetchChatRooms();
     } catch (error) {
-      console.error('Erro ao excluir chat room:', error);
-      toast.error('Erro ao excluir chat');
+      console.error('Error in deleteChatRoom:', error);
     }
   };
 
   useEffect(() => {
     fetchChatRooms();
-  }, [user]);
+  }, [user?.id]);
 
   return {
     chatRooms,
