@@ -24,9 +24,14 @@ export const useChatRooms = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchChatRooms = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log('Fetching chat rooms for user:', user.id);
+      
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -41,7 +46,12 @@ export const useChatRooms = () => {
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching chat rooms:', error);
+        throw error;
+      }
+
+      console.log('Chat rooms fetched:', data);
 
       const roomsWithSectors = data?.map(room => ({
         ...room,
@@ -64,6 +74,8 @@ export const useChatRooms = () => {
     }
 
     try {
+      console.log('Creating chat room:', { name, description, sectorIds, userId: user.id });
+
       const { data: roomData, error: roomError } = await supabase
         .from('chat_rooms')
         .insert({
@@ -74,28 +86,41 @@ export const useChatRooms = () => {
         .select()
         .single();
 
-      if (roomError) throw roomError;
+      if (roomError) {
+        console.error('Error creating chat room:', roomError);
+        throw roomError;
+      }
 
-      // Vincular aos setores
+      console.log('Chat room created:', roomData);
+
+      // Vincular aos setores se houver
       if (sectorIds.length > 0) {
         const sectorInserts = sectorIds.map(sectorId => ({
           chat_room_id: roomData.id,
           sector_id: sectorId
         }));
 
+        console.log('Inserting sector associations:', sectorInserts);
+
         const { error: sectorsError } = await supabase
           .from('chat_room_sectors')
           .insert(sectorInserts);
 
-        if (sectorsError) throw sectorsError;
+        if (sectorsError) {
+          console.error('Error associating sectors:', sectorsError);
+          throw sectorsError;
+        }
+
+        console.log('Sectors associated successfully');
       }
 
       toast.success('Chat criado com sucesso!');
-      fetchChatRooms();
+      await fetchChatRooms();
       return roomData;
     } catch (error) {
       console.error('Erro ao criar chat room:', error);
       toast.error('Erro ao criar chat');
+      throw error;
     }
   };
 
@@ -141,7 +166,7 @@ export const useChatRooms = () => {
       }
 
       toast.success('Chat atualizado com sucesso!');
-      fetchChatRooms();
+      await fetchChatRooms();
     } catch (error) {
       console.error('Erro ao atualizar chat room:', error);
       toast.error('Erro ao atualizar chat');
@@ -164,7 +189,7 @@ export const useChatRooms = () => {
       if (error) throw error;
 
       toast.success('Chat excluído com sucesso!');
-      fetchChatRooms();
+      await fetchChatRooms();
     } catch (error) {
       console.error('Erro ao excluir chat room:', error);
       toast.error('Erro ao excluir chat');

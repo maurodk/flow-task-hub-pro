@@ -638,6 +638,14 @@ export type Database = {
         Args: { user_id: string; sector_id: string }
         Returns: boolean
       }
+      user_can_access_chat_room: {
+        Args: { room_id: string; user_id: string }
+        Returns: boolean
+      }
+      user_can_create_chat_room: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

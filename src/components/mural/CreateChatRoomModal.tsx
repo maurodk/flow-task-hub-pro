@@ -11,7 +11,7 @@ import { useSectors } from '@/hooks/useSectors';
 interface CreateChatRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (name: string, description: string, sectorIds: string[]) => void;
+  onSubmit: (name: string, description: string, sectorIds: string[]) => Promise<void>;
 }
 
 const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
@@ -33,21 +33,32 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
     }
 
     setIsSubmitting(true);
-    await onSubmit(name.trim(), description.trim(), selectedSectors);
     
-    // Reset form
-    setName('');
-    setDescription('');
-    setSelectedSectors([]);
-    setIsSubmitting(false);
-    onClose();
+    try {
+      console.log('Submitting chat room:', { name: name.trim(), description: description.trim(), selectedSectors });
+      
+      await onSubmit(name.trim(), description.trim(), selectedSectors);
+      
+      // Reset form only on success
+      setName('');
+      setDescription('');
+      setSelectedSectors([]);
+      onClose();
+    } catch (error) {
+      console.error('Error submitting chat room:', error);
+      // Don't close modal on error so user can retry
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
-    setName('');
-    setDescription('');
-    setSelectedSectors([]);
-    onClose();
+    if (!isSubmitting) {
+      setName('');
+      setDescription('');
+      setSelectedSectors([]);
+      onClose();
+    }
   };
 
   const handleSectorToggle = (sectorId: string) => {
@@ -77,6 +88,7 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -88,6 +100,7 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -100,6 +113,7 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
                     id={sector.id}
                     checked={selectedSectors.includes(sector.id)}
                     onCheckedChange={() => handleSectorToggle(sector.id)}
+                    disabled={isSubmitting}
                   />
                   <Label htmlFor={sector.id} className="text-sm cursor-pointer">
                     {sector.name}
@@ -115,7 +129,12 @@ const CreateChatRoomModal: React.FC<CreateChatRoomModalProps> = ({
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
             <Button 
