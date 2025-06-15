@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Plus, X, Check, Clock } from 'lucide-react';
+import { Users, Plus, X, UserCheck } from 'lucide-react';
 import { Event, EventParticipant, UserProfile } from '@/hooks/useEvents';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -72,17 +72,6 @@ const EventParticipantsModal: React.FC<EventParticipantsModalProps> = ({
     
     await onRemoveParticipant(event.id, userId);
     loadData(); // Recarregar dados
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"><Check className="h-3 w-3 mr-1" />Confirmado</Badge>;
-      case 'declined':
-        return <Badge variant="destructive" className="text-xs"><X className="h-3 w-3 mr-1" />Recusado</Badge>;
-      default:
-        return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
-    }
   };
 
   const availableUsers = allUsers.filter(
@@ -171,7 +160,10 @@ const EventParticipantsModal: React.FC<EventParticipantsModalProps> = ({
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    {getStatusBadge(participant.status)}
+                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <UserCheck className="h-3 w-3 mr-1" />
+                      Participante
+                    </Badge>
                     {isCreator && (
                       <Button
                         variant="ghost"

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -127,11 +128,12 @@ export const useEvents = () => {
           event_id: eventId,
           user_id: userId,
           invited_by: user.id,
-          status: 'pending'
+          status: 'confirmed' // Automaticamente confirmado como associação direta
         });
 
       if (error) throw error;
       toast.success('Participante adicionado com sucesso!');
+      fetchEvents(); // Atualizar lista de eventos para refletir novo contador
     } catch (error) {
       console.error('Erro ao adicionar participante:', error);
       toast.error('Erro ao adicionar participante');
@@ -153,6 +155,7 @@ export const useEvents = () => {
 
       if (error) throw error;
       toast.success('Participante removido com sucesso!');
+      fetchEvents(); // Atualizar lista de eventos para refletir novo contador
     } catch (error) {
       console.error('Erro ao remover participante:', error);
       toast.error('Erro ao remover participante');
