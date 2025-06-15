@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { FileText, Repeat, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,9 +46,9 @@ export const ActivityTypeCardGrid: React.FC<Props> = ({ data, total }) => {
   }));
 
   return (
-    // Container geral mais largo, centralizado, padding horizontal para não encostar nas laterais
-    <div className="w-full max-w-5xl mx-auto px-2 sm:px-4 md:px-6">
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+    // Container geral mais largo, centralizado, padding maior para mais espaço nas bordas
+    <div className="w-full max-w-6xl mx-auto px-1 sm:px-6 md:px-12">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {cardList.map((c, idx) => {
           const Conf = TYPE_CONFIG[c.type];
           const isActive = expandedIdx === idx;
