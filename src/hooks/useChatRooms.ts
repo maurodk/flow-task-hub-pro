@@ -21,39 +21,35 @@ export interface ChatRoom {
 export const useChatRooms = () => {
   const { user } = useAuth();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [archivedChatRooms, setArchivedChatRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingArchived, setLoadingArchived] = useState(false);
 
-  const fetchChatRooms = async () => {
+  const fetchChatRoomsWithSectors = async (isActive: boolean) => {
     if (!user) {
       console.log('No user found, skipping chat rooms fetch');
-      setChatRooms([]);
-      setLoading(false);
-      return;
+      return [];
     }
 
     try {
-      console.log('Fetching chat rooms for user:', user.id);
+      console.log(`Fetching ${isActive ? 'active' : 'archived'} chat rooms for user:`, user.id);
       
-      // Buscar todos os chat rooms ativos primeiro
       const { data: roomsData, error: roomsError } = await supabase
         .from('chat_rooms')
         .select('*')
-        .eq('is_active', true)
+        .eq('is_active', isActive)
         .order('created_at', { ascending: false });
 
       if (roomsError) {
-        console.error('Error fetching chat rooms:', roomsError);
-        toast.error(`Erro ao carregar chats: ${roomsError.message}`);
-        setChatRooms([]);
-        return;
+        console.error(`Error fetching ${isActive ? 'active' : 'archived'} chat rooms:`, roomsError);
+        throw roomsError;
       }
 
-      console.log('Chat rooms data fetched:', roomsData);
+      console.log(`${isActive ? 'Active' : 'Archived'} chat rooms data fetched:`, roomsData);
 
       if (!roomsData || roomsData.length === 0) {
-        console.log('No chat rooms found');
-        setChatRooms([]);
-        return;
+        console.log(`No ${isActive ? 'active' : 'archived'} chat rooms found`);
+        return [];
       }
 
       // Buscar os setores para cada chat room
@@ -95,14 +91,39 @@ export const useChatRooms = () => {
         })
       );
 
-      console.log('Final chat rooms with sectors:', roomsWithSectors);
-      setChatRooms(roomsWithSectors);
+      console.log(`Final ${isActive ? 'active' : 'archived'} chat rooms with sectors:`, roomsWithSectors);
+      return roomsWithSectors;
     } catch (error) {
-      console.error('Unexpected error fetching chat rooms:', error);
-      toast.error('Erro inesperado ao carregar chats');
+      console.error(`Unexpected error fetching ${isActive ? 'active' : 'archived'} chat rooms:`, error);
+      throw error;
+    }
+  };
+
+  const fetchChatRooms = async () => {
+    try {
+      setLoading(true);
+      const activeChatRooms = await fetchChatRoomsWithSectors(true);
+      setChatRooms(activeChatRooms);
+    } catch (error) {
+      console.error('Error fetching active chat rooms:', error);
+      toast.error('Erro ao carregar chats ativos');
       setChatRooms([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchArchivedChatRooms = async () => {
+    try {
+      setLoadingArchived(true);
+      const archived = await fetchChatRoomsWithSectors(false);
+      setArchivedChatRooms(archived);
+    } catch (error) {
+      console.error('Error fetching archived chat rooms:', error);
+      toast.error('Erro ao carregar chats arquivados');
+      setArchivedChatRooms([]);
+    } finally {
+      setLoadingArchived(false);
     }
   };
 
@@ -115,7 +136,6 @@ export const useChatRooms = () => {
     try {
       console.log('Creating chat room:', { name, description, sectorIds, userId: user.id });
 
-      // Criar o chat room
       const { data: roomData, error: roomError } = await supabase
         .from('chat_rooms')
         .insert({
@@ -135,7 +155,6 @@ export const useChatRooms = () => {
 
       console.log('Chat room created successfully:', roomData);
 
-      // Vincular aos setores se houver
       if (sectorIds.length > 0) {
         console.log('Associating sectors to chat room:', sectorIds);
         
@@ -159,7 +178,6 @@ export const useChatRooms = () => {
 
       toast.success('Chat criado com sucesso!');
       
-      // Refresh automático após criar
       console.log('Refreshing chat rooms after creation...');
       await fetchChatRooms();
       
@@ -194,7 +212,6 @@ export const useChatRooms = () => {
         throw roomError;
       }
 
-      // Remover vínculos existentes
       const { error: deleteError } = await supabase
         .from('chat_room_sectors')
         .delete()
@@ -206,7 +223,6 @@ export const useChatRooms = () => {
         throw deleteError;
       }
 
-      // Adicionar novos vínculos
       if (sectorIds.length > 0) {
         const sectorInserts = sectorIds.map(sectorId => ({
           chat_room_id: roomId,
@@ -226,11 +242,70 @@ export const useChatRooms = () => {
 
       toast.success('Chat atualizado com sucesso!');
       
-      // Refresh automático após atualizar
       console.log('Refreshing chat rooms after update...');
       await fetchChatRooms();
     } catch (error) {
       console.error('Error in updateChatRoom:', error);
+    }
+  };
+
+  const archiveChatRoom = async (roomId: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para arquivar um chat');
+      return;
+    }
+
+    try {
+      console.log('Archiving chat room:', roomId);
+
+      const { error } = await supabase
+        .from('chat_rooms')
+        .update({ is_active: false })
+        .eq('id', roomId);
+
+      if (error) {
+        console.error('Error archiving chat room:', error);
+        toast.error(`Erro ao arquivar chat: ${error.message}`);
+        throw error;
+      }
+
+      toast.success('Chat arquivado com sucesso!');
+      
+      console.log('Refreshing chat rooms after archiving...');
+      await fetchChatRooms();
+      await fetchArchivedChatRooms();
+    } catch (error) {
+      console.error('Error in archiveChatRoom:', error);
+    }
+  };
+
+  const restoreChatRoom = async (roomId: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para restaurar um chat');
+      return;
+    }
+
+    try {
+      console.log('Restoring chat room:', roomId);
+
+      const { error } = await supabase
+        .from('chat_rooms')
+        .update({ is_active: true })
+        .eq('id', roomId);
+
+      if (error) {
+        console.error('Error restoring chat room:', error);
+        toast.error(`Erro ao restaurar chat: ${error.message}`);
+        throw error;
+      }
+
+      toast.success('Chat restaurado com sucesso!');
+      
+      console.log('Refreshing chat rooms after restoration...');
+      await fetchChatRooms();
+      await fetchArchivedChatRooms();
+    } catch (error) {
+      console.error('Error in restoreChatRoom:', error);
     }
   };
 
@@ -241,11 +316,24 @@ export const useChatRooms = () => {
     }
 
     try {
-      console.log('Deleting chat room:', roomId);
+      console.log('Permanently deleting chat room:', roomId);
 
+      // Primeiro, remover vínculos com setores
+      const { error: sectorsError } = await supabase
+        .from('chat_room_sectors')
+        .delete()
+        .eq('chat_room_id', roomId);
+
+      if (sectorsError) {
+        console.error('Error deleting chat room sectors:', sectorsError);
+        toast.error(`Erro ao remover vínculos: ${sectorsError.message}`);
+        throw sectorsError;
+      }
+
+      // Depois, excluir o chat room permanentemente
       const { error } = await supabase
         .from('chat_rooms')
-        .update({ is_active: false })
+        .delete()
         .eq('id', roomId);
 
       if (error) {
@@ -254,11 +342,11 @@ export const useChatRooms = () => {
         throw error;
       }
 
-      toast.success('Chat excluído com sucesso!');
+      toast.success('Chat excluído permanentemente!');
       
-      // Refresh automático após excluir
       console.log('Refreshing chat rooms after deletion...');
       await fetchChatRooms();
+      await fetchArchivedChatRooms();
     } catch (error) {
       console.error('Error in deleteChatRoom:', error);
     }
@@ -270,10 +358,15 @@ export const useChatRooms = () => {
 
   return {
     chatRooms,
+    archivedChatRooms,
     loading,
+    loadingArchived,
     createChatRoom,
     updateChatRoom,
+    archiveChatRoom,
+    restoreChatRoom,
     deleteChatRoom,
-    fetchChatRooms
+    fetchChatRooms,
+    fetchArchivedChatRooms
   };
 };
