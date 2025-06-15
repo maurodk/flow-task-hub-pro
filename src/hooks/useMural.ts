@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,6 +41,7 @@ export const useMural = () => {
   const [comments, setComments] = useState<{[postId: string]: MuralComment[]}>({});
   const [userActivities, setUserActivities] = useState<{id: string; title: string}[]>([]);
   const [selectedSector, setSelectedSector] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('geral');
   const [loading, setLoading] = useState(true);
 
   const uploadFile = async (file: File, folder: string = 'general'): Promise<string | null> => {
@@ -86,7 +86,7 @@ export const useMural = () => {
     }
   };
 
-  const fetchPosts = async (sectorFilter?: string) => {
+  const fetchPosts = async (filter?: { sectorId?: string; chatRoomId?: string; isGeneral?: boolean }) => {
     try {
       let query = supabase
         .from('mural_posts')
@@ -96,8 +96,16 @@ export const useMural = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (sectorFilter) {
-        query = query.eq('sector_id', sectorFilter);
+      // Aplicar filtros baseado na aba ativa
+      if (filter?.isGeneral) {
+        // Aba Geral: posts sem setor e sem chat room específico
+        query = query.is('sector_id', null).is('chat_room_id', null);
+      } else if (filter?.sectorId) {
+        // Aba de Setor: posts do setor específico (sem chat room)
+        query = query.eq('sector_id', filter.sectorId).is('chat_room_id', null);
+      } else if (filter?.chatRoomId) {
+        // Aba de Chat Room: posts do chat room específico
+        query = query.eq('chat_room_id', filter.chatRoomId);
       }
 
       const { data: postsData, error: postsError } = await query;
@@ -223,13 +231,26 @@ export const useMural = () => {
         }));
       }
 
+      // Determinar setor e chat room baseado na aba ativa
+      let postSectorId = null;
+      let postChatRoomId = null;
+
+      if (activeTab.startsWith('sector-')) {
+        postSectorId = activeTab.replace('sector-', '');
+      } else if (activeTab.startsWith('room-')) {
+        postChatRoomId = activeTab.replace('room-', '');
+      } else if (sectorId) {
+        postSectorId = sectorId;
+      }
+
       const { error } = await supabase
         .from('mural_posts')
         .insert({
           title,
           content,
           activity_ids: activityIds,
-          sector_id: sectorId || null,
+          sector_id: postSectorId,
+          chat_room_id: postChatRoomId,
           user_id: user.id,
           attachments
         });
@@ -237,7 +258,7 @@ export const useMural = () => {
       if (error) throw error;
 
       toast.success('Post criado com sucesso!');
-      fetchPosts(selectedSector);
+      refreshCurrentTab();
     } catch (error) {
       console.error('Erro ao criar post:', error);
       toast.error('Erro ao criar post');
@@ -344,10 +365,10 @@ export const useMural = () => {
         title,
         content,
         activity_ids: activityIds,
-        sector_id: sectorId || null,
         updated_at: new Date().toISOString()
       };
 
+      // Não alterar setor/chat room ao editar - manter na aba atual
       if (files && files.length > 0) {
         updateData.attachments = attachments;
       }
@@ -361,7 +382,7 @@ export const useMural = () => {
       if (error) throw error;
 
       toast.success('Post editado com sucesso!');
-      fetchPosts(selectedSector);
+      refreshCurrentTab();
     } catch (error) {
       console.error('Erro ao editar post:', error);
       toast.error('Erro ao editar post');
@@ -401,31 +422,59 @@ export const useMural = () => {
       if (error) throw error;
 
       toast.success('Post excluído com sucesso!');
-      fetchPosts(selectedSector);
+      refreshCurrentTab();
     } catch (error) {
       console.error('Erro ao excluir post:', error);
       toast.error('Erro ao excluir post');
     }
   };
 
+  const refreshCurrentTab = () => {
+    if (activeTab === 'geral') {
+      fetchPosts({ isGeneral: true });
+    } else if (activeTab.startsWith('sector-')) {
+      const sectorId = activeTab.replace('sector-', '');
+      fetchPosts({ sectorId });
+    } else if (activeTab.startsWith('room-')) {
+      const chatRoomId = activeTab.replace('room-', '');
+      fetchPosts({ chatRoomId });
+    }
+  };
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    if (newTab === 'geral') {
+      fetchPosts({ isGeneral: true });
+    } else if (newTab.startsWith('sector-')) {
+      const sectorId = newTab.replace('sector-', '');
+      fetchPosts({ sectorId });
+    } else if (newTab.startsWith('room-')) {
+      const chatRoomId = newTab.replace('room-', '');
+      fetchPosts({ chatRoomId });
+    }
+  };
+
   useEffect(() => {
-    fetchPosts(selectedSector);
     fetchUserActivities();
-  }, [user, selectedSector]);
+    refreshCurrentTab();
+  }, [user, activeTab]);
 
   return {
     posts,
     comments,
     userActivities,
     selectedSector,
+    activeTab,
     loading,
     setSelectedSector,
+    handleTabChange,
     createPost,
     createComment,
     toggleLike,
     fetchComments,
     uploadFile,
     editPost,
-    deletePost
+    deletePost,
+    refreshCurrentTab
   };
 };

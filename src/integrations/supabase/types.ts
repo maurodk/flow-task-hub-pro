@@ -225,6 +225,72 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_room_sectors: {
+        Row: {
+          chat_room_id: string
+          created_at: string
+          id: string
+          sector_id: string
+        }
+        Insert: {
+          chat_room_id: string
+          created_at?: string
+          id?: string
+          sector_id: string
+        }
+        Update: {
+          chat_room_id?: string
+          created_at?: string
+          id?: string
+          sector_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_room_sectors_chat_room_id_fkey"
+            columns: ["chat_room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_room_sectors_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_rooms: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           attendees_count: number | null
@@ -332,6 +398,7 @@ export type Database = {
         Row: {
           activity_ids: string[] | null
           attachments: Json | null
+          chat_room_id: string | null
           content: string
           created_at: string
           id: string
@@ -344,6 +411,7 @@ export type Database = {
         Insert: {
           activity_ids?: string[] | null
           attachments?: Json | null
+          chat_room_id?: string | null
           content: string
           created_at?: string
           id?: string
@@ -356,6 +424,7 @@ export type Database = {
         Update: {
           activity_ids?: string[] | null
           attachments?: Json | null
+          chat_room_id?: string | null
           content?: string
           created_at?: string
           id?: string
@@ -366,6 +435,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "mural_posts_chat_room_id_fkey"
+            columns: ["chat_room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "mural_posts_sector_id_fkey"
             columns: ["sector_id"]
