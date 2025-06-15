@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from "recharts";
-import { FileText, Repeat, Template } from "lucide-react";
+import { FileText, Repeat, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Tipos de atividade, cor e ícone
@@ -15,7 +15,7 @@ const TYPE_CONFIG = {
   template_based: {
     label: "Predefinida",
     color: "#06b6d4",
-    icon: Template,
+    icon: Copy,
     gradient: "from-cyan-400 to-cyan-600"
   },
   recurring: {

@@ -123,10 +123,11 @@ const NewDashboard = () => {
   ];
 
   // Prepare os dados para o novo donut chart
+  // Garante que os types sejam sempre do tipo correto
   const donutTypeData = [
-    { type: "standard", value: activities.filter(a => a.activity_type === "standard").length },
-    { type: "template_based", value: activities.filter(a => a.activity_type === "template_based").length },
-    { type: "recurring", value: activities.filter(a => a.activity_type === "recurring").length }
+    { type: "standard" as const, value: activities.filter(a => a.activity_type === "standard").length },
+    { type: "template_based" as const, value: activities.filter(a => a.activity_type === "template_based").length },
+    { type: "recurring" as const, value: activities.filter(a => a.activity_type === "recurring").length }
   ];
 
   const typeChartConfig = {
