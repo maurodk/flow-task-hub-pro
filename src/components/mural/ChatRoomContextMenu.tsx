@@ -8,7 +8,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Edit, Archive } from 'lucide-react';
-import { ChatRoom } from '@/hooks/useChatRooms';
+import { ChatRoom } from '@/types/chatRoom';
 
 interface ChatRoomContextMenuProps {
   chatRoom: ChatRoom;
