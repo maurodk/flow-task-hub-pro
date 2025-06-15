@@ -380,15 +380,11 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           </DropdownMenu>
         </div>
         
-        {/* Dica visual sobre o context menu e status de debug */}
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-1">
+        {/* Dica visual sobre o context menu */}
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
           {(chatRooms.length > 0 || archivedChatRooms.length > 0) && (
             <div>💡 Dica: Clique com o botão direito nos chats para acessar opções adicionais</div>
           )}
-          {/* Status de debug para desenvolvimento */}
-          <div className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs">
-            Debug: {chatRooms.length} chats ativos | Loading: {loading.toString()} | User Admin: {true}
-          </div>
         </div>
       </div>
 
