@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
 import { useSectors } from '@/hooks/useSectors';
@@ -194,9 +194,43 @@ const NewDashboard = () => {
   };
 
   // Filtros do LineChart
-  const [rangePreset, setRangePreset] = useState<"7d" | "30d" | "90d" | "180d" | "365d" | "custom">("30d");
+  // 1. Começa com "7d"
+  const [rangePreset, setRangePreset] = useState<"7d" | "30d" | "90d" | "180d" | "365d" | "custom">("7d");
   const [customRange, setCustomRange] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
   const [groupBy, setGroupBy] = useState<"daily" | "weekly" | "monthly">("daily");
+
+  // Novo: só sugere o preset automaticamente na primeira carga (flag para evitar sobrescrever escolha do usuário)
+  const didSetSmartRange = useRef(false);
+
+  // Novo: Utilitário para sugerir o preset para cobrir a primeira atividade até hoje
+  function suggestBestPreset(activities: Activity[]) {
+    if (!activities || activities.length === 0) return "7d";
+    // Data da atividade mais antiga
+    const firstCreated = activities
+      .map(a => a.created_at)
+      .sort()[0];
+    if (!firstCreated) return "7d";
+    const createdDate = new Date(firstCreated);
+    const now = new Date();
+    const msDiff = now.getTime() - createdDate.getTime();
+    const daysDiff = msDiff / (1000 * 60 * 60 * 24);
+
+    if (daysDiff <= 7) return "7d";
+    if (daysDiff <= 30) return "30d";
+    if (daysDiff <= 90) return "90d";
+    if (daysDiff <= 180) return "180d";
+    if (daysDiff <= 365) return "365d";
+    return "365d";
+  }
+
+  // Quando as atividades carregarem, sugere o preset automaticamente apenas na primeira carga
+  useEffect(() => {
+    if (activities.length === 0) return;
+    if (didSetSmartRange.current) return; // só uma vez
+    const preset = suggestBestPreset(activities);
+    setRangePreset(preset as typeof rangePreset);
+    didSetSmartRange.current = true;
+  }, [activities]);
 
   // --- Novo trecho: preparar dados do gráfico de linhas (não-cumulativo, por dia) ---
   function getRangeDates() {
