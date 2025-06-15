@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -298,7 +299,7 @@ export const useMural = () => {
 
       toast.success('Comentário adicionado!');
       fetchComments(postId);
-      fetchPosts(selectedSector); // Atualizar contagem de comentários
+      refreshCurrentTab(); // Usar refreshCurrentTab ao invés de fetchPosts com selectedSector
     } catch (error) {
       console.error('Erro ao criar comentário:', error);
       toast.error('Erro ao comentar');
@@ -334,7 +335,7 @@ export const useMural = () => {
         if (error) throw error;
       }
 
-      fetchPosts();
+      refreshCurrentTab(); // Usar refreshCurrentTab ao invés de fetchPosts sem parâmetros
     } catch (error) {
       console.error('Erro ao curtir post:', error);
       toast.error('Erro ao curtir post');
