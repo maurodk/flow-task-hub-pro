@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } from 'lucide-react';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import DonutActivityTypeChart from "@/components/charts/DonutActivityTypeChart";
 
 interface Activity {
   id: string;
@@ -119,6 +120,13 @@ const NewDashboard = () => {
     { name: 'Alta', value: activities.filter(a => a.priority === 'high').length, fill: "var(--color-alta)" },
     { name: 'Média', value: activities.filter(a => a.priority === 'medium').length, fill: "var(--color-media)" },
     { name: 'Baixa', value: activities.filter(a => a.priority === 'low').length, fill: "var(--color-baixa)" },
+  ];
+
+  // Prepare os dados para o novo donut chart
+  const donutTypeData = [
+    { type: "standard", value: activities.filter(a => a.activity_type === "standard").length },
+    { type: "template_based", value: activities.filter(a => a.activity_type === "template_based").length },
+    { type: "recurring", value: activities.filter(a => a.activity_type === "recurring").length }
   ];
 
   const typeChartConfig = {
@@ -412,40 +420,15 @@ const NewDashboard = () => {
         <div className="mt-8">
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
-              <CardTitle>Tipos de Atividades</CardTitle>
-              <CardDescription>Distribuição por tipo de atividade</CardDescription>
+              <CardTitle>
+                Tipos de Atividades
+              </CardTitle>
+              <CardDescription>
+                Distribuição por tipo de atividade
+              </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 pb-0">
-                <ChartContainer
-                    config={typeChartConfig}
-                    className="mx-auto aspect-square max-h-[300px]"
-                >
-                    <PieChart>
-                        <ChartTooltip
-                            cursor={false}
-                            content={<ChartTooltipContent hideLabel />}
-                        />
-                        <Pie
-                            data={typeData}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={60}
-                            strokeWidth={5}
-                        >
-                            <LabelList
-                                dataKey="value"
-                                className="fill-background"
-                                stroke="none"
-                                fontSize={12}
-                                formatter={(value: number) => totalActivities > 0 ? `${((value / totalActivities) * 100).toFixed(0)}%` : '0%'}
-                            />
-                        </Pie>
-                        <ChartLegend
-                            content={<ChartLegendContent nameKey="name" />}
-                            className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-                        />
-                    </PieChart>
-                </ChartContainer>
+            <CardContent className="pb-0">
+              <DonutActivityTypeChart data={donutTypeData} total={totalActivities} />
             </CardContent>
           </Card>
         </div>
