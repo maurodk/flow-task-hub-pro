@@ -68,6 +68,11 @@ const EventsSection: React.FC = () => {
     setParticipantsEvent(event);
   };
 
+  const handleViewParticipants = (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setParticipantsEvent(event);
+  };
+
   if (loading) {
     return (
       <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
@@ -145,10 +150,13 @@ const EventsSection: React.FC = () => {
                       </p>
                     )}
 
-                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <button
+                      onClick={(e) => handleViewParticipants(event, e)}
+                      className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                    >
                       <Users className="h-3 w-3" />
                       {event.attendees_count} participantes
-                    </p>
+                    </button>
                   </div>
 
                   {user && user.id === event.created_by && (

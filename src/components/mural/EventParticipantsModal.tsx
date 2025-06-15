@@ -39,13 +39,14 @@ const EventParticipantsModal: React.FC<EventParticipantsModalProps> = ({
     
     setLoading(true);
     try {
-      const [participantsData, usersData] = await Promise.all([
-        onFetchParticipants(event.id),
-        onFetchAllUsers()
-      ]);
-      
+      const participantsData = await onFetchParticipants(event.id);
       setParticipants(participantsData);
-      setAllUsers(usersData);
+
+      // Só carregar todos os usuários se for o criador do evento
+      if (user && user.id === event.created_by) {
+        const usersData = await onFetchAllUsers();
+        setAllUsers(usersData);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
