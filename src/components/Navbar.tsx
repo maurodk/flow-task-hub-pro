@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
@@ -16,6 +16,7 @@ import {
 const Navbar = () => {
   const { signOut } = useAuth();
   const location = useLocation();
+  const { settings } = useSystemSettings();
 
   const handleSignOut = async () => {
     try {
@@ -29,16 +30,28 @@ const Navbar = () => {
     return location.pathname === path;
   };
 
+  const companyLogo = settings.company_logo;
+
   return (
     <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-            <span className="text-xl font-bold text-gray-900 dark:text-white">
-              EmpresaCorp
-            </span>
+            {companyLogo ? (
+              <img 
+                src={companyLogo} 
+                alt="Logo da empresa" 
+                className="h-8 w-auto max-w-[200px] object-contain"
+              />
+            ) : (
+              <>
+                <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <span className="text-xl font-bold text-gray-900 dark:text-white">
+                  EmpresaCorp
+                </span>
+              </>
+            )}
           </div>
 
           {/* Navigation Links */}

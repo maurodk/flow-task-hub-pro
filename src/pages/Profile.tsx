@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
@@ -9,8 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { User, Mail, Save, Camera, Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import { User, Mail, Save, Camera, Lock, Eye, EyeOff, Shield, Settings } from 'lucide-react';
 import AdminPanel from '@/components/admin/AdminPanel';
+import CompanyLogoManager from '@/components/admin/CompanyLogoManager';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -234,15 +236,21 @@ const Profile = () => {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin && !roleLoading ? 'grid-cols-2' : 'grid-cols-1'} dark:bg-slate-800`}>
+          <TabsList className={`grid w-full ${isAdmin && !roleLoading ? 'grid-cols-3' : 'grid-cols-1'} dark:bg-slate-800`}>
             <TabsTrigger value="profile" className="dark:data-[state=active]:bg-slate-700">
               Informações Pessoais
             </TabsTrigger>
             {isAdmin && !roleLoading && (
-              <TabsTrigger value="admin" className="dark:data-[state=active]:bg-slate-700">
-                <Shield className="h-4 w-4 mr-2" />
-                Gerenciar Acessos
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="admin" className="dark:data-[state=active]:bg-slate-700">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Gerenciar Acessos
+                </TabsTrigger>
+                <TabsTrigger value="system" className="dark:data-[state=active]:bg-slate-700">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configurações do Sistema
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -493,9 +501,15 @@ const Profile = () => {
           </TabsContent>
 
           {isAdmin && !roleLoading && (
-            <TabsContent value="admin">
-              <AdminPanel />
-            </TabsContent>
+            <>
+              <TabsContent value="admin">
+                <AdminPanel />
+              </TabsContent>
+              
+              <TabsContent value="system" className="space-y-8">
+                <CompanyLogoManager />
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </div>
