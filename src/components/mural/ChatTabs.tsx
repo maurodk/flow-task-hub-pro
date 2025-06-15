@@ -169,7 +169,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
               {children}
             </div>
           )
-        )}
+        ))}
       </div>
     </div>
   );
