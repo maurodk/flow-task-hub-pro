@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Plus, Hash, Users, MessageCircle, ChevronDown } from 'lucide-react';
 import { useSectors } from '@/hooks/useSectors';
 import { useChatRooms, ChatRoom } from '@/hooks/useChatRooms';
@@ -23,7 +23,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
   const { sectors } = useSectors();
   const { chatRooms } = useChatRooms();
 
-  // Estado para controlar qual setor está selecionado no dropdown
+  // Função para obter o nome do setor selecionado
   const getSelectedSectorName = () => {
     if (activeTab.startsWith('sector-')) {
       const sectorId = activeTab.replace('sector-', '');
@@ -31,6 +31,16 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
       return sector?.name || 'Setor';
     }
     return 'Setores';
+  };
+
+  // Função para obter o nome do chat customizado selecionado
+  const getSelectedChatName = () => {
+    if (activeTab.startsWith('room-')) {
+      const roomId = activeTab.replace('room-', '');
+      const room = chatRooms.find(r => r.id === roomId);
+      return room?.name || 'Chat';
+    }
+    return 'Chats Customizados';
   };
 
   return (
@@ -50,7 +60,7 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           </Button>
         </div>
         
-        {/* Nova estrutura horizontal com dropdown para setores */}
+        {/* Nova estrutura horizontal com três dropdowns/botões */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {/* Aba Geral */}
           <Button
@@ -98,19 +108,48 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Abas de Chat Rooms Customizados */}
-          {chatRooms.map((room) => (
-            <Button
-              key={room.id}
-              variant={activeTab === `room-${room.id}` ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onTabChange(`room-${room.id}`)}
-              className="flex items-center gap-2 whitespace-nowrap"
-            >
-              <Hash className="h-4 w-4" />
-              {room.name}
-            </Button>
-          ))}
+          {/* Dropdown para Chats Customizados */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={activeTab.startsWith('room-') ? 'default' : 'outline'}
+                size="sm"
+                className="flex items-center gap-2 whitespace-nowrap"
+              >
+                <Hash className="h-4 w-4" />
+                {getSelectedChatName()}
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {chatRooms.map((room) => (
+                <DropdownMenuItem
+                  key={room.id}
+                  onClick={() => onTabChange(`room-${room.id}`)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Hash className="h-4 w-4" />
+                  {room.name}
+                  {activeTab === `room-${room.id}` && (
+                    <div className="ml-auto h-2 w-2 bg-purple-500 rounded-full" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+              {chatRooms.length > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                onClick={onCreateChatRoom}
+                className="flex items-center gap-2 cursor-pointer text-blue-600 dark:text-blue-400"
+              >
+                <Plus className="h-4 w-4" />
+                Criar Novo Chat
+              </DropdownMenuItem>
+              {chatRooms.length === 0 && (
+                <DropdownMenuItem disabled className="text-sm text-gray-500">
+                  Nenhum chat personalizado
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
