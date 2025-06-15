@@ -3,9 +3,13 @@ import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Hash, Users, MessageCircle, ChevronDown } from 'lucide-react';
 import { useSectors } from '@/hooks/useSectors';
 import { useChatRooms, ChatRoom } from '@/hooks/useChatRooms';
+import ChatRoomContextMenu from './ChatRoomContextMenu';
+import EditChatRoomModal from './EditChatRoomModal';
+import { toast } from 'sonner';
 
 interface ChatTabsProps {
   activeTab: string;
@@ -21,7 +25,15 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
   children
 }) => {
   const { sectors } = useSectors();
-  const { chatRooms } = useChatRooms();
+  const { chatRooms, updateChatRoom, deleteChatRoom } = useChatRooms();
+  
+  // Estados para modais e confirmações
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedChatRoom, setSelectedChatRoom] = useState<ChatRoom | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [chatToArchive, setChatToArchive] = useState<ChatRoom | null>(null);
+  const [chatToDelete, setChatToDelete] = useState<ChatRoom | null>(null);
 
   // Função para obter o nome do setor selecionado
   const getSelectedSectorName = () => {
@@ -41,6 +53,65 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
       return room?.name || 'Chat';
     }
     return 'Chats Customizados';
+  };
+
+  // Handlers para o Context Menu
+  const handleEditChat = (chatRoom: ChatRoom) => {
+    setSelectedChatRoom(chatRoom);
+    setEditModalOpen(true);
+  };
+
+  const handleArchiveChat = (chatRoom: ChatRoom) => {
+    setChatToArchive(chatRoom);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleDeleteChat = (chatRoom: ChatRoom) => {
+    setChatToDelete(chatRoom);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirmação de arquivamento
+  const confirmArchive = async () => {
+    if (chatToArchive) {
+      try {
+        await deleteChatRoom(chatToArchive.id);
+        toast.success('Chat arquivado com sucesso!');
+        
+        // Se o chat arquivado estava ativo, voltar para a aba geral
+        if (activeTab === `room-${chatToArchive.id}`) {
+          onTabChange('geral');
+        }
+      } catch (error) {
+        toast.error('Erro ao arquivar chat');
+      }
+    }
+    setArchiveDialogOpen(false);
+    setChatToArchive(null);
+  };
+
+  // Confirmação de exclusão (mesmo comportamento do arquivamento por ora)
+  const confirmDelete = async () => {
+    if (chatToDelete) {
+      try {
+        await deleteChatRoom(chatToDelete.id);
+        toast.success('Chat excluído com sucesso!');
+        
+        // Se o chat excluído estava ativo, voltar para a aba geral
+        if (activeTab === `room-${chatToDelete.id}`) {
+          onTabChange('geral');
+        }
+      } catch (error) {
+        toast.error('Erro ao excluir chat');
+      }
+    }
+    setDeleteDialogOpen(false);
+    setChatToDelete(null);
+  };
+
+  // Handler para atualizar chat room
+  const handleUpdateChatRoom = async (roomId: string, name: string, description: string, sectorIds: string[]) => {
+    await updateChatRoom(roomId, name, description, sectorIds);
   };
 
   return (
@@ -123,17 +194,24 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
               {chatRooms.map((room) => (
-                <DropdownMenuItem
+                <ChatRoomContextMenu
                   key={room.id}
-                  onClick={() => onTabChange(`room-${room.id}`)}
-                  className="flex items-center gap-2 cursor-pointer"
+                  chatRoom={room}
+                  onEdit={handleEditChat}
+                  onArchive={handleArchiveChat}
+                  onDelete={handleDeleteChat}
                 >
-                  <Hash className="h-4 w-4" />
-                  {room.name}
-                  {activeTab === `room-${room.id}` && (
-                    <div className="ml-auto h-2 w-2 bg-purple-500 rounded-full" />
-                  )}
-                </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onTabChange(`room-${room.id}`)}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Hash className="h-4 w-4" />
+                    {room.name}
+                    {activeTab === `room-${room.id}` && (
+                      <div className="ml-auto h-2 w-2 bg-purple-500 rounded-full" />
+                    )}
+                  </DropdownMenuItem>
+                </ChatRoomContextMenu>
               ))}
               {chatRooms.length > 0 && <DropdownMenuSeparator />}
               <DropdownMenuItem
@@ -210,6 +288,66 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
           )
         ))}
       </div>
+
+      {/* Modal de Edição */}
+      <EditChatRoomModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedChatRoom(null);
+        }}
+        onSubmit={handleUpdateChatRoom}
+        chatRoom={selectedChatRoom}
+      />
+
+      {/* Dialog de Confirmação de Arquivamento */}
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Arquivar Chat</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja arquivar o chat "{chatToArchive?.name}"?
+              <br />
+              <br />
+              O chat será removido da lista, mas não será excluído permanentemente.
+              Você pode reativá-lo posteriormente se necessário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmArchive}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Arquivar Chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Chat</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o chat "{chatToDelete?.name}"?
+              <br />
+              <br />
+              <strong>Esta ação não pode ser desfeita.</strong> O chat e todas as suas mensagens serão removidos permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Excluir Chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
