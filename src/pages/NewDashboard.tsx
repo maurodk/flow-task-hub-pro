@@ -191,6 +191,50 @@ const NewDashboard = () => {
     }
   };
 
+  // --- Novo trecho: preparar dados do gráfico de escada (cumulative area chart) ---
+  // Função para agrupar por dia, considerando created_at (adicionados) e completed (concluídos)
+  function buildStairChartData(activities: Activity[]) {
+    type DateMap = { [date: string]: { added: number; completed: number } };
+    const dateMap: DateMap = {};
+
+    // Quantos foram adicionados por dia
+    for (const a of activities) {
+      const created = a.created_at ? new Date(a.created_at).toISOString().slice(0, 10) : null;
+      if (created) {
+        if (!dateMap[created]) dateMap[created] = { added: 0, completed: 0 };
+        dateMap[created].added++;
+      }
+      // Conta concluídas usando due_date somente se completed
+      if (a.status === 'completed') {
+        // Tenta usar due_date como data de conclusão (caso queira ajustar para completed_at no futuro)
+        const completedDay = a.due_date
+          ? new Date(a.due_date).toISOString().slice(0, 10)
+          : (a.created_at ? new Date(a.created_at).toISOString().slice(0, 10) : null);
+        if (completedDay) {
+          if (!dateMap[completedDay]) dateMap[completedDay] = { added: 0, completed: 0 };
+          dateMap[completedDay].completed++;
+        }
+      }
+    }
+
+    // Ordena as datas para montar a série acumulada
+    const allDates = Object.keys(dateMap).sort();
+    let cumulativeAdded = 0;
+    let cumulativeCompleted = 0;
+    const data = allDates.map(date => {
+      cumulativeAdded += dateMap[date].added;
+      cumulativeCompleted += dateMap[date].completed;
+      return {
+        date,
+        Adicionadas: cumulativeAdded,
+        Concluídas: cumulativeCompleted,
+      };
+    });
+    return data;
+  }
+
+  const stairChartData = buildStairChartData(activities);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
@@ -423,15 +467,43 @@ const NewDashboard = () => {
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-0 shadow-lg">
             <CardHeader>
               <CardTitle>
-                Tipos de Atividades
+                Evolução de Atividades
               </CardTitle>
               <CardDescription>
-                Distribuição por tipo de atividade
+                Visualize como as atividades estão sendo adicionadas e concluídas ao longo do tempo.
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-0">
-              {/* Novo grid de cards moderno */}
-              <ActivityTypeCardGrid data={donutTypeData} total={totalActivities} />
+              {stairChartData.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  Não há dados suficientes para exibir o gráfico.
+                </p>
+              ) : (
+                <div className="w-full h-[340px] flex items-center">
+                  <ResponsiveContainer width="100%" height="90%">
+                    <AreaChart data={stairChartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontSize: 13 }} />
+                      <YAxis tick={{ fontSize: 13 }} allowDecimals={false} />
+                      <Tooltip />
+                      <Area
+                        type="monotone"
+                        dataKey="Adicionadas"
+                        stackId="1"
+                        stroke="#3b82f6"
+                        fill="rgba(59,130,246,0.25)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="Concluídas"
+                        stackId="1"
+                        stroke="#10b981"
+                        fill="rgba(16,185,129,0.25)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
