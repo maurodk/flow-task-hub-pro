@@ -47,7 +47,7 @@ export const ActivityTypeCardGrid: React.FC<Props> = ({ data, total }) => {
   }));
 
   return (
-    <div className="w-full grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+    <div className="w-full grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
       {cardList.map((c, idx) => {
         const Conf = TYPE_CONFIG[c.type];
         const isActive = expandedIdx === idx;
@@ -56,45 +56,58 @@ export const ActivityTypeCardGrid: React.FC<Props> = ({ data, total }) => {
           <motion.div
             key={c.type}
             layout
-            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            transition={{
+              duration: isActive ? 0.27 : 0.18, // mais rápido para abrir/fechar
+              type: "tween",
+              ease: isActive ? "easeInOut" : "easeOut",
+              delay: idx * 0.033,
+            }}
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: idx * 0.07, type: "spring", stiffness: 100, damping: 18 }}
+            exit={{ opacity: 0, y: 10, scale: 0.98 }}
             tabIndex={0}
             aria-label={Conf.label}
             className={cn(
-              "relative group cursor-pointer rounded-3xl bg-white/70 dark:bg-slate-700/60 glass shadow-lg ring-1 ring-transparent transition-all duration-300 focus:outline-none",
-              "hover:scale-[1.035] hover:shadow-2xl hover:ring-2",
+              "relative group cursor-pointer rounded-3xl bg-white/80 dark:bg-slate-800/70 glass",
+              "shadow-lg ring-1 ring-transparent transition-all duration-200 focus:outline-none",
+              "hover:scale-[1.03] hover:shadow-2xl hover:ring-2",
               Conf.shadow,
-              isActive && "scale-105 ring-2 ring-primary/80 z-20"
+              isActive && "scale-105 ring-2 ring-primary/90 z-20",
+              // sizing:
+              "min-h-[250px] md:min-h-[320px] min-w-0 px-7 py-6 flex flex-col justify-between",
+              // for a more prominent card and similar to ref image
+              isActive
+                ? "md:shadow-2xl md:ring-2 md:scale-105"
+                : "md:shadow-lg"
             )}
-            style={{ minHeight: 180 }}
+            style={{
+              maxWidth: 440,
+              margin: "0 auto"
+            }}
             onClick={() => setExpandedIdx(isActive ? null : idx)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") setExpandedIdx(isActive ? null : idx);
             }}
           >
-            <div className="p-5 flex flex-col items-center">
+            <div className="flex flex-col items-center justify-center h-full w-full">
               <span
                 className={cn(
-                  "w-14 h-14 rounded-full flex items-center justify-center mb-2 shadow-lg bg-gradient-to-br",
+                  "w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-lg bg-gradient-to-br",
                   Conf.gradient
                 )}
               >
-                <Conf.icon className="w-7 h-7 text-white" />
+                <Conf.icon className="w-8 h-8 text-white" />
               </span>
               <div className="flex items-center gap-1 mb-1">
-                <span className="font-bold text-xl text-foreground">{c.value}</span>
-                <span className="text-xs text-muted-foreground">{Conf.label}</span>
+                <span className="font-bold text-2xl text-foreground">{c.value}</span>
+                <span className="text-base text-muted-foreground">{Conf.label}</span>
               </div>
-              <div className="w-full flex items-center justify-between gap-1 mb-2">
-                <div className="flex items-center gap-1 text-sm">
-                  <Progress value={c.percent} className="w-[80px] h-[7px] rounded-full bg-muted" />
-                  <span className="ml-2 font-medium text-indigo-700 dark:text-cyan-400">
-                    {c.percent}%
-                  </span>
-                </div>
+              <div className="w-full flex items-center justify-center gap-2 mb-2">
+                <Progress value={c.percent} className="w-[90px] h-[7px] rounded-full bg-muted" />
+                <span className="ml-2 font-medium text-cyan-700 dark:text-cyan-400">
+                  {c.percent}%
+                </span>
               </div>
-              {/* Tooltip informação extra */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-xs underline decoration-dotted text-muted-foreground cursor-help">
@@ -110,14 +123,14 @@ export const ActivityTypeCardGrid: React.FC<Props> = ({ data, total }) => {
                 </TooltipContent>
               </Tooltip>
             </div>
-            {/* Detalhes expandidos */}
             <AnimatePresence>
               {isActive && (
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 16 }}
-                  className="flex flex-col items-center p-4 border-t border-muted-foreground/10 bg-muted/40 dark:bg-slate-800/50 rounded-b-3xl"
+                  transition={{ duration: 0.18, type: "tween", ease: "easeOut" }}
+                  className="flex flex-col items-center p-5 mt-1 border-t border-muted-foreground/10 bg-muted/40 dark:bg-slate-800/60 rounded-b-3xl"
                 >
                   <div className="mb-2 text-xs text-muted-foreground font-medium">
                     Estatística detalhada:
@@ -128,21 +141,19 @@ export const ActivityTypeCardGrid: React.FC<Props> = ({ data, total }) => {
                   <div className="text-xs mt-1">
                     Percentual: <b>{c.percent}%</b>
                   </div>
-                  {/* Aqui pode-se adicionar mais dados/contexto/performance */}
                   <div className="mt-2 flex gap-1 items-center text-xs">
                     <span className="rounded-full px-2 py-0.5 bg-primary/10 text-primary shadow">
                       {Conf.label}
                     </span>
-                    {/* Micro-feedback visual */}
                     <span className="animate-pulse w-2 h-2 rounded-full bg-green-400" />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            {/* Sombra de luz efeito glass */}
+            {/* Glassmorphism highlight on card bottom for modern look */}
             <div className={cn(
               "absolute inset-0 rounded-3xl pointer-events-none",
-              "bg-gradient-to-t from-white/30 dark:from-slate-600/50 to-transparent"
+              "bg-gradient-to-t from-white/25 dark:from-slate-700/30 to-transparent"
             )} />
           </motion.div>
         );
