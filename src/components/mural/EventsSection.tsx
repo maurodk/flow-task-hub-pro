@@ -57,7 +57,7 @@ const EventsSection: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
             <Calendar className="h-5 w-5" />
-            Próximos Eventos
+            Eventos
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -76,7 +76,7 @@ const EventsSection: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
               <Calendar className="h-5 w-5" />
-              Próximos Eventos
+              Eventos
             </CardTitle>
             <Button
               size="sm"
@@ -94,15 +94,6 @@ const EventsSection: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400 text-sm">
                 Nenhum evento próximo encontrado
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCreateEventOpen(true)}
-                className="mt-2"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Criar primeiro evento
-              </Button>
             </div>
           ) : (
             events.map((event) => (
