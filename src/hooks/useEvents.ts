@@ -16,6 +16,27 @@ export interface Event {
   updated_at: string;
 }
 
+export interface EventParticipant {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: 'pending' | 'confirmed' | 'declined';
+  invited_by: string;
+  created_at: string;
+  profiles?: {
+    name: string;
+    email: string;
+    avatar_url?: string;
+  };
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+}
+
 export const useEvents = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
@@ -37,6 +58,112 @@ export const useEvents = () => {
       toast.error('Erro ao carregar eventos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEventParticipants = async (eventId: string): Promise<EventParticipant[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('event_participants')
+        .select(`
+          *,
+          profiles!event_participants_user_id_fkey (
+            name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar participantes:', error);
+      toast.error('Erro ao carregar participantes');
+      return [];
+    }
+  };
+
+  const fetchAllUsers = async (): Promise<UserProfile[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, email, avatar_url')
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+      toast.error('Erro ao carregar usuários');
+      return [];
+    }
+  };
+
+  const addParticipant = async (eventId: string, userId: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para adicionar participantes');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('event_participants')
+        .insert({
+          event_id: eventId,
+          user_id: userId,
+          invited_by: user.id,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+      toast.success('Participante adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar participante:', error);
+      toast.error('Erro ao adicionar participante');
+    }
+  };
+
+  const removeParticipant = async (eventId: string, userId: string) => {
+    if (!user) {
+      toast.error('Você precisa estar logado para remover participantes');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('event_participants')
+        .delete()
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      toast.success('Participante removido com sucesso!');
+    } catch (error) {
+      console.error('Erro ao remover participante:', error);
+      toast.error('Erro ao remover participante');
+    }
+  };
+
+  const updateParticipantStatus = async (eventId: string, status: 'confirmed' | 'declined') => {
+    if (!user) {
+      toast.error('Você precisa estar logado para atualizar participação');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('event_participants')
+        .update({ status })
+        .eq('event_id', eventId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      toast.success(status === 'confirmed' ? 'Participação confirmada!' : 'Participação recusada');
+      fetchEvents(); // Atualizar lista de eventos
+    } catch (error) {
+      console.error('Erro ao atualizar participação:', error);
+      toast.error('Erro ao atualizar participação');
     }
   };
 
@@ -129,6 +256,11 @@ export const useEvents = () => {
     createEvent,
     updateEvent,
     deleteEvent,
-    fetchEvents
+    fetchEvents,
+    fetchEventParticipants,
+    fetchAllUsers,
+    addParticipant,
+    removeParticipant,
+    updateParticipantStatus
   };
 };

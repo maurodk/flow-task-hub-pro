@@ -3,19 +3,31 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Users, Plus, Clock, Trash2, Edit } from 'lucide-react';
+import { Calendar, Users, Plus, Clock, Trash2, Edit, UserPlus } from 'lucide-react';
 import { useEvents, Event } from '@/hooks/useEvents';
 import CreateEventModal from './CreateEventModal';
 import EditEventModal from './EditEventModal';
+import EventParticipantsModal from './EventParticipantsModal';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 
 const EventsSection: React.FC = () => {
   const { user } = useAuth();
-  const { events, loading, createEvent, updateEvent, deleteEvent } = useEvents();
+  const { 
+    events, 
+    loading, 
+    createEvent, 
+    updateEvent, 
+    deleteEvent,
+    fetchEventParticipants,
+    fetchAllUsers,
+    addParticipant,
+    removeParticipant
+  } = useEvents();
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [participantsEvent, setParticipantsEvent] = useState<Event | null>(null);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
   const getDateBadge = (dateString: string) => {
@@ -49,6 +61,11 @@ const EventsSection: React.FC = () => {
     if (window.confirm('Tem certeza que deseja excluir este evento?')) {
       await deleteEvent(eventId);
     }
+  };
+
+  const handleManageParticipants = (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setParticipantsEvent(event);
   };
 
   if (loading) {
@@ -139,6 +156,15 @@ const EventsSection: React.FC = () => {
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={(e) => handleManageParticipants(event, e)}
+                        className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-900/20"
+                        title="Gerenciar participantes"
+                      >
+                        <UserPlus className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={(e) => handleEditEvent(event, e)}
                         className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
                         title="Editar evento"
@@ -174,6 +200,16 @@ const EventsSection: React.FC = () => {
         isOpen={!!editingEvent}
         onClose={() => setEditingEvent(null)}
         onSubmit={updateEvent}
+      />
+
+      <EventParticipantsModal
+        event={participantsEvent}
+        isOpen={!!participantsEvent}
+        onClose={() => setParticipantsEvent(null)}
+        onAddParticipant={addParticipant}
+        onRemoveParticipant={removeParticipant}
+        onFetchParticipants={fetchEventParticipants}
+        onFetchAllUsers={fetchAllUsers}
       />
     </>
   );
