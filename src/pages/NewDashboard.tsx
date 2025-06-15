@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, AreaChart, Area } from 'recharts';
 import { Calendar, CheckCircle, Clock, Pause, TrendingUp, Activity, Target } from 'lucide-react';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import DonutActivityTypeChart from "@/components/charts/DonutActivityTypeChart";
@@ -192,7 +192,7 @@ const NewDashboard = () => {
   };
 
   // --- Novo trecho: preparar dados do gráfico de escada (cumulative area chart) ---
-  // Função para agrupar por dia, considerando created_at (adicionados) e completed (concluídos)
+  // Função para agrupar por dia, considerando created_at (adicionados) e completed (concluídas)
   function buildStairChartData(activities: Activity[]) {
     type DateMap = { [date: string]: { added: number; completed: number } };
     const dateMap: DateMap = {};
