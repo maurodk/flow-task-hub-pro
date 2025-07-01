@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useAuth';
@@ -86,31 +85,13 @@ const Dashboard = () => {
       console.log('👤 É admin?', isAdmin);
       console.log('🏢 Setores do usuário:', userSectors.map(us => us.sector_id));
 
-      let query = supabase
+      // Com RLS ativo, a consulta já está protegida automaticamente
+      // Usuários só verão atividades próprias ou de setores onde pertencem
+      // Admins verão todas as atividades
+      const { data, error } = await supabase
         .from('activities')
-        .select('*');
-
-      // Aplicar lógica de visualização baseada no role
-      if (isAdmin) {
-        console.log('🔓 Admin: buscando todas as atividades');
-        // Admins veem todas as atividades, sem filtro de usuário
-      } else {
-        console.log('🔒 Usuário comum: aplicando filtros');
-        // Usuários comuns veem atividades dos seus setores + atividades que criaram
-        const userSectorIds = userSectors.map(us => us.sector_id);
-        
-        if (userSectorIds.length > 0) {
-          // Filtrar por: (atividades dos setores do usuário) OU (atividades criadas pelo usuário)
-          query = query.or(`sector_id.in.(${userSectorIds.join(',')}),user_id.eq.${user.id}`);
-        } else {
-          // Se não tem setores, só vê as próprias atividades
-          query = query.eq('user_id', user.id);
-        }
-      }
-
-      query = query.order('created_at', { ascending: false });
-
-      const { data, error } = await query;
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -121,16 +102,21 @@ const Dashboard = () => {
         priority: activity.priority as 'low' | 'medium' | 'high',
       }));
       
-      console.log('📋 Dashboard: Atividades encontradas:', typedActivities.length);
+      console.log('📋 Dashboard: Atividades encontradas (protegidas por RLS):', typedActivities.length);
       setActivities(typedActivities);
     } catch (error: any) {
       console.error('Erro ao buscar atividades:', error);
-      toast.error('Erro ao carregar atividades');
+      if (error.message.includes('row-level security')) {
+        toast.error('Erro de permissão ao carregar atividades');
+      } else {
+        toast.error('Erro ao carregar atividades');
+      }
     }
   };
 
   const fetchProfiles = async () => {
     try {
+      // Com RLS ativo, usuários só veem o próprio perfil (ou admin vê todos)
       const { data, error } = await supabase
         .from('profiles')
         .select('*');
@@ -139,11 +125,15 @@ const Dashboard = () => {
       setProfiles(data || []);
     } catch (error: any) {
       console.error('Erro ao buscar perfis:', error);
+      if (error.message.includes('row-level security')) {
+        console.log('RLS ativo: usuário só vê próprio perfil');
+      }
     }
   };
 
   const fetchProgressLogs = async (activityId: string) => {
     try {
+      // Com RLS ativo, usuário só vê logs de atividades que tem acesso
       const { data, error } = await supabase
         .from('activity_progress_logs')
         .select('*')
@@ -154,7 +144,11 @@ const Dashboard = () => {
       setProgressLogs(data || []);
     } catch (error: any) {
       console.error('Erro ao buscar logs de progresso:', error);
-      toast.error('Erro ao carregar histórico de progresso');
+      if (error.message.includes('row-level security')) {
+        toast.error('Você não tem permissão para ver o histórico desta atividade');
+      } else {
+        toast.error('Erro ao carregar histórico de progresso');
+      }
     }
   };
 
@@ -164,6 +158,7 @@ const Dashboard = () => {
 
     try {
       if (editingActivity) {
+        // Com RLS ativo, apenas o proprietário ou admin pode atualizar
         const { error } = await supabase
           .from('activities')
           .update(formData)
@@ -172,6 +167,7 @@ const Dashboard = () => {
         if (error) throw error;
         toast.success('Atividade atualizada com sucesso!');
       } else {
+        // Com RLS ativo, user_id deve ser o do usuário autenticado
         const { error } = await supabase
           .from('activities')
           .insert({
@@ -187,7 +183,11 @@ const Dashboard = () => {
       fetchActivities();
     } catch (error: any) {
       console.error('Erro ao salvar atividade:', error);
-      toast.error('Erro ao salvar atividade');
+      if (error.message.includes('row-level security')) {
+        toast.error('Você não tem permissão para esta operação');
+      } else {
+        toast.error('Erro ao salvar atividade');
+      }
     } finally {
       setLoading(false);
     }
@@ -205,6 +205,7 @@ const Dashboard = () => {
     setLoading(true);
 
     try {
+      // Com RLS ativo, apenas usuários autorizados podem criar logs de progresso
       const { error } = await supabase
         .from('activity_progress_logs')
         .insert({
@@ -226,7 +227,11 @@ const Dashboard = () => {
       }
     } catch (error: any) {
       console.error('Erro ao registrar progresso:', error);
-      toast.error('Erro ao registrar progresso');
+      if (error.message.includes('row-level security')) {
+        toast.error('Você não tem permissão para registrar progresso nesta atividade');
+      } else {
+        toast.error('Erro ao registrar progresso');
+      }
     } finally {
       setLoading(false);
     }
@@ -260,6 +265,7 @@ const Dashboard = () => {
     if (!confirm('Tem certeza que deseja excluir esta atividade?')) return;
 
     try {
+      // Com RLS ativo, apenas o proprietário ou admin pode excluir
       const { error } = await supabase
         .from('activities')
         .delete()
@@ -270,7 +276,11 @@ const Dashboard = () => {
       fetchActivities();
     } catch (error: any) {
       console.error('Erro ao excluir atividade:', error);
-      toast.error('Erro ao excluir atividade');
+      if (error.message.includes('row-level security')) {
+        toast.error('Você não tem permissão para excluir esta atividade');
+      } else {
+        toast.error('Erro ao excluir atividade');
+      }
     }
   };
 

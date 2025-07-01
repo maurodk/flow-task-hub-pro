@@ -28,6 +28,7 @@ export const useSectors = () => {
 
   const fetchSectors = async () => {
     try {
+      // Com RLS ativo, usuários autenticados podem ver todos os setores
       const { data, error } = await supabase
         .from('sectors')
         .select('*')
@@ -45,6 +46,7 @@ export const useSectors = () => {
     if (!user) return;
 
     try {
+      // Com RLS ativo, usuário só vê seus próprios setores (ou admin vê todos)
       const { data, error } = await supabase
         .from('user_sectors')
         .select(`
@@ -65,6 +67,7 @@ export const useSectors = () => {
 
   const addUserToSector = async (userId: string, sectorId: string) => {
     try {
+      // Apenas admins podem adicionar usuários a setores (protegido por RLS)
       const { error } = await supabase
         .from('user_sectors')
         .insert({
@@ -79,6 +82,8 @@ export const useSectors = () => {
       console.error('Erro ao adicionar usuário ao setor:', error);
       if (error.message.includes('3 setores')) {
         toast.error('Usuário já atingiu o limite máximo de 3 setores');
+      } else if (error.message.includes('row-level security')) {
+        toast.error('Apenas administradores podem gerenciar setores de usuários');
       } else {
         toast.error('Erro ao adicionar usuário ao setor');
       }
@@ -88,6 +93,7 @@ export const useSectors = () => {
 
   const removeUserFromSector = async (userId: string, sectorId: string) => {
     try {
+      // Apenas admins podem remover usuários de setores (protegido por RLS)
       const { error } = await supabase
         .from('user_sectors')
         .delete()
@@ -99,7 +105,11 @@ export const useSectors = () => {
       return { success: true };
     } catch (error: any) {
       console.error('Erro ao remover usuário do setor:', error);
-      toast.error('Erro ao remover usuário do setor');
+      if (error.message.includes('row-level security')) {
+        toast.error('Apenas administradores podem gerenciar setores de usuários');
+      } else {
+        toast.error('Erro ao remover usuário do setor');
+      }
       return { success: false, error };
     }
   };

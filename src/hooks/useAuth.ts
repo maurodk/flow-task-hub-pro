@@ -22,6 +22,7 @@ export const useUserRole = () => {
       setLoading(true);
       console.log('📊 Consultando roles no banco...');
       
+      // Agora com RLS ativo, a consulta já está protegida
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -57,6 +58,7 @@ export const useUserRole = () => {
     try {
       console.log('🔧 Tornando usuário admin:', userId);
       
+      // Apenas admins podem executar esta operação (protegido por RLS)
       const { error } = await supabase
         .from('user_roles')
         .insert({
@@ -78,6 +80,7 @@ export const useUserRole = () => {
     try {
       console.log('🔧 Removendo role de admin:', userId);
       
+      // Apenas admins podem executar esta operação (protegido por RLS)
       const { error } = await supabase
         .from('user_roles')
         .delete()

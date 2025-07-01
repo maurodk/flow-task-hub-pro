@@ -24,6 +24,9 @@ export const useActivities = () => {
       console.log('👤 É admin?', isAdmin);
       console.log('🏢 Setores do usuário:', userSectors.map(us => us.sector_id));
 
+      // Com RLS ativo, a consulta já está protegida automaticamente
+      // Usuários só verão atividades próprias ou de setores onde pertencem
+      // Admins verão todas as atividades
       let query = supabase
         .from('activities')
         .select(`
@@ -31,24 +34,6 @@ export const useActivities = () => {
           activity_subtasks (*),
           sector:sectors(name)
         `);
-
-      // Aplicar lógica de visualização baseada no role
-      if (isAdmin) {
-        console.log('🔓 Admin: buscando todas as atividades');
-        // Admins veem todas as atividades, sem filtro de usuário
-      } else {
-        console.log('🔒 Usuário comum: aplicando filtros');
-        // Usuários comuns veem atividades dos seus setores + atividades que criaram
-        const userSectorIds = userSectors.map(us => us.sector_id);
-        
-        if (userSectorIds.length > 0) {
-          // Filtrar por: (atividades dos setores do usuário) OU (atividades criadas pelo usuário)
-          query = query.or(`sector_id.in.(${userSectorIds.join(',')}),user_id.eq.${user.id}`);
-        } else {
-          // Se não tem setores, só vê as próprias atividades
-          query = query.eq('user_id', user.id);
-        }
-      }
 
       // Aplicar filtro de setor específico se selecionado
       if (sectorFilter) {
@@ -71,11 +56,15 @@ export const useActivities = () => {
         sector_name: activity.sector?.name || null
       })) || [];
 
-      console.log('📋 Atividades encontradas:', formattedActivities.length);
+      console.log('📋 Atividades encontradas (protegidas por RLS):', formattedActivities.length);
       setActivities(formattedActivities);
     } catch (error: any) {
       console.error('Erro ao buscar atividades:', error);
-      toast.error('Erro ao carregar atividades');
+      if (error.message.includes('row-level security')) {
+        toast.error('Erro de permissão ao carregar atividades');
+      } else {
+        toast.error('Erro ao carregar atividades');
+      }
     } finally {
       setLoading(false);
     }
@@ -85,6 +74,7 @@ export const useActivities = () => {
     if (!user) return;
 
     try {
+      // Com RLS ativo, usuário só vê seus próprios templates
       const { data, error } = await supabase
         .from('user_activity_templates')
         .select(`
@@ -103,6 +93,9 @@ export const useActivities = () => {
       setUserTemplates(formattedTemplates);
     } catch (error: any) {
       console.error('Erro ao buscar templates:', error);
+      if (error.message.includes('row-level security')) {
+        toast.error('Erro de permissão ao carregar templates');
+      }
     }
   };
 
@@ -136,6 +129,7 @@ export const useActivities = () => {
         nextDueAt = calculateNextDueDate(formData.recurrence_type, formData.recurrence_time);
       }
 
+      // Com RLS ativo, apenas o próprio usuário pode criar atividades em seu nome
       const { data: activity, error } = await supabase
         .from('activities')
         .insert({
@@ -162,12 +156,16 @@ export const useActivities = () => {
       return activity;
     } catch (error: any) {
       console.error('Erro ao criar atividade:', error);
+      if (error.message.includes('row-level security')) {
+        toast.error('Erro de permissão ao criar atividade');
+      }
       throw error;
     }
   };
 
   const toggleSubtask = async (activityId: string, subtaskId: string, isCompleted: boolean) => {
     try {
+      // Com RLS ativo, apenas usuários autorizados podem modificar subtasks
       const { error } = await supabase
         .from('activity_subtasks')
         .update({ 
@@ -181,12 +179,17 @@ export const useActivities = () => {
       fetchActivities(selectedSector);
     } catch (error: any) {
       console.error('Erro ao atualizar subtask:', error);
-      toast.error('Erro ao atualizar subtarefa');
+      if (error.message.includes('row-level security')) {
+        toast.error('Você não tem permissão para modificar esta subtarefa');
+      } else {
+        toast.error('Erro ao atualizar subtarefa');
+      }
     }
   };
 
   const deleteActivity = async (activityId: string) => {
     try {
+      // Com RLS ativo, apenas o proprietário ou admin pode excluir
       const { error } = await supabase
         .from('activities')
         .delete()
@@ -198,7 +201,11 @@ export const useActivities = () => {
       fetchActivities(selectedSector);
     } catch (error: any) {
       console.error('Erro ao excluir atividade:', error);
-      toast.error('Erro ao excluir atividade');
+      if (error.message.includes('row-level security')) {
+        toast.error('Você não tem permissão para excluir esta atividade');
+      } else {
+        toast.error('Erro ao excluir atividade');
+      }
     }
   };
 
