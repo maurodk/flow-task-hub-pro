@@ -52,8 +52,10 @@ const SectorForm: React.FC<SectorFormProps> = ({ value, onChange }) => {
       </Select>
       <p className="text-sm text-gray-500 dark:text-gray-400">
         {isAdmin 
-          ? "Como administrador, você pode atribuir atividades a qualquer setor"
-          : "Você pode atribuir atividades apenas aos setores dos quais faz parte"
+          ? "Como administrador, você pode atribuir a qualquer setor"
+          : availableSectors.length > 0 
+            ? "Você pode atribuir apenas aos setores dos quais faz parte"
+            : "Você não tem acesso a nenhum setor específico"
         }
       </p>
     </div>
