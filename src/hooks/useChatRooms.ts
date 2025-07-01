@@ -23,6 +23,8 @@ export const useChatRooms = () => {
   const fetchChatRooms = async (forceFetch = false) => {
     if (!user?.id) {
       console.log('[useChatRooms] No user found, skipping fetch');
+      setChatRooms([]);
+      setLoading(false);
       return;
     }
     
@@ -38,7 +40,12 @@ export const useChatRooms = () => {
       
       console.log('[useChatRooms] Fetched active chat rooms:', {
         count: activeChatRooms.length,
-        rooms: activeChatRooms.map(r => ({ id: r.id, name: r.name, created_by: r.created_by }))
+        rooms: activeChatRooms.map(r => ({ 
+          id: r.id, 
+          name: r.name, 
+          created_by: r.created_by,
+          sectors: r.sectors?.map(s => s.name) || []
+        }))
       });
       
       setChatRooms(activeChatRooms);
@@ -53,13 +60,23 @@ export const useChatRooms = () => {
   };
 
   const fetchArchivedChatRooms = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setArchivedChatRooms([]);
+      return;
+    }
     
     try {
       setLoadingArchived(true);
       console.log('[useChatRooms] Fetching archived chat rooms...');
       const archived = await fetchChatRoomsWithSectors(false, user.id);
-      console.log('[useChatRooms] Fetched archived chat rooms:', archived.length);
+      console.log('[useChatRooms] Fetched archived chat rooms:', {
+        count: archived.length,
+        rooms: archived.map(r => ({ 
+          id: r.id, 
+          name: r.name,
+          sectors: r.sectors?.map(s => s.name) || []
+        }))
+      });
       setArchivedChatRooms(archived);
     } catch (error) {
       console.error('[useChatRooms] Error fetching archived chat rooms:', error);
@@ -100,8 +117,10 @@ export const useChatRooms = () => {
       await updateChatRoomOperation(roomId, name, description, sectorIds, user.id);
       console.log('[useChatRooms] Chat room updated, refreshing...');
       await fetchChatRooms(true);
+      toast.success('Chat atualizado com sucesso!');
     } catch (error) {
       console.error('[useChatRooms] Error updating chat room:', error);
+      toast.error('Erro ao atualizar chat');
     }
   };
 
@@ -114,8 +133,10 @@ export const useChatRooms = () => {
       console.log('[useChatRooms] Chat room archived, refreshing...');
       await fetchChatRooms(true);
       await fetchArchivedChatRooms();
+      toast.success('Chat arquivado com sucesso!');
     } catch (error) {
       console.error('[useChatRooms] Error archiving chat room:', error);
+      toast.error('Erro ao arquivar chat');
     }
   };
 
@@ -128,8 +149,10 @@ export const useChatRooms = () => {
       console.log('[useChatRooms] Chat room restored, refreshing...');
       await fetchChatRooms(true);
       await fetchArchivedChatRooms();
+      toast.success('Chat restaurado com sucesso!');
     } catch (error) {
       console.error('[useChatRooms] Error restoring chat room:', error);
+      toast.error('Erro ao restaurar chat');
     }
   };
 
@@ -142,8 +165,10 @@ export const useChatRooms = () => {
       console.log('[useChatRooms] Chat room deleted, refreshing...');
       await fetchChatRooms(true);
       await fetchArchivedChatRooms();
+      toast.success('Chat excluído permanentemente!');
     } catch (error) {
       console.error('[useChatRooms] Error deleting chat room:', error);
+      toast.error('Erro ao excluir chat');
     }
   };
 
@@ -156,7 +181,7 @@ export const useChatRooms = () => {
   useEffect(() => {
     console.log('[useChatRooms] chatRooms state changed:', {
       count: chatRooms.length,
-      rooms: chatRooms.map(r => ({ id: r.id, name: r.name }))
+      rooms: chatRooms.map(r => ({ id: r.id, name: r.name, sectors: r.sectors?.map(s => s.name) || [] }))
     });
   }, [chatRooms]);
 

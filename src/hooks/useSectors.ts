@@ -28,6 +28,7 @@ export const useSectors = () => {
 
   const fetchSectors = async () => {
     try {
+      console.log('🔍 Fetching all sectors...');
       // Com RLS ativo, usuários autenticados podem ver todos os setores
       const { data, error } = await supabase
         .from('sectors')
@@ -35,6 +36,7 @@ export const useSectors = () => {
         .order('name');
 
       if (error) throw error;
+      console.log('📋 Sectors loaded:', data?.length || 0);
       setSectors(data || []);
     } catch (error: any) {
       console.error('Erro ao buscar setores:', error);
@@ -43,9 +45,15 @@ export const useSectors = () => {
   };
 
   const fetchUserSectors = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('👤 No user, skipping user sectors fetch');
+      setUserSectors([]);
+      setLoading(false);
+      return;
+    }
 
     try {
+      console.log('🔍 Fetching user sectors for:', user.id);
       // Com RLS ativo, usuário só vê seus próprios setores (ou admin vê todos)
       const { data, error } = await supabase
         .from('user_sectors')
@@ -56,6 +64,7 @@ export const useSectors = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
+      console.log('📋 User sectors loaded:', data?.length || 0, data?.map(us => us.sector?.name));
       setUserSectors(data || []);
     } catch (error: any) {
       console.error('Erro ao buscar setores do usuário:', error);
@@ -67,6 +76,7 @@ export const useSectors = () => {
 
   const addUserToSector = async (userId: string, sectorId: string) => {
     try {
+      console.log('➕ Adding user to sector:', { userId, sectorId });
       // Apenas admins podem adicionar usuários a setores (protegido por RLS)
       const { error } = await supabase
         .from('user_sectors')
@@ -77,6 +87,12 @@ export const useSectors = () => {
 
       if (error) throw error;
       toast.success('Usuário adicionado ao setor com sucesso!');
+      
+      // Refresh user sectors if it's the current user
+      if (userId === user?.id) {
+        await fetchUserSectors();
+      }
+      
       return { success: true };
     } catch (error: any) {
       console.error('Erro ao adicionar usuário ao setor:', error);
@@ -93,6 +109,7 @@ export const useSectors = () => {
 
   const removeUserFromSector = async (userId: string, sectorId: string) => {
     try {
+      console.log('➖ Removing user from sector:', { userId, sectorId });
       // Apenas admins podem remover usuários de setores (protegido por RLS)
       const { error } = await supabase
         .from('user_sectors')
@@ -102,6 +119,12 @@ export const useSectors = () => {
 
       if (error) throw error;
       toast.success('Usuário removido do setor com sucesso!');
+      
+      // Refresh user sectors if it's the current user
+      if (userId === user?.id) {
+        await fetchUserSectors();
+      }
+      
       return { success: true };
     } catch (error: any) {
       console.error('Erro ao remover usuário do setor:', error);
@@ -118,7 +141,26 @@ export const useSectors = () => {
     return userSectors.filter(us => us.user_id === userId);
   };
 
+  const getUserSectorIds = (userId?: string) => {
+    const targetUserId = userId || user?.id;
+    if (!targetUserId) return [];
+    
+    return userSectors
+      .filter(us => us.user_id === targetUserId)
+      .map(us => us.sector_id);
+  };
+
+  const getUserSectorNames = (userId?: string) => {
+    const targetUserId = userId || user?.id;
+    if (!targetUserId) return [];
+    
+    return userSectors
+      .filter(us => us.user_id === targetUserId && us.sector)
+      .map(us => us.sector!.name);
+  };
+
   useEffect(() => {
+    console.log('🔄 useSectors useEffect triggered, user:', user?.id);
     fetchSectors();
     fetchUserSectors();
   }, [user]);
@@ -132,5 +174,7 @@ export const useSectors = () => {
     addUserToSector,
     removeUserFromSector,
     getUserSectors,
+    getUserSectorIds,
+    getUserSectorNames,
   };
 };
