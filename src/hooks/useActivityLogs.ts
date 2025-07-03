@@ -21,11 +21,11 @@ export const useActivityLogs = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchLogs = async (limit = 5) => {
+  const fetchLogs = async (limit = 5): Promise<ActivityLog[]> => {
     if (!user) {
       setLogs([]);
       setLoading(false);
-      return;
+      return [];
     }
 
     try {
@@ -40,10 +40,17 @@ export const useActivityLogs = () => {
       if (error) throw error;
 
       console.log('📋 Logs encontrados:', data?.length || 0);
-      setLogs(data || []);
+      const typedLogs = (data || []).map(log => ({
+        ...log,
+        action_type: log.action_type as 'created' | 'completed' | 'updated' | 'deleted'
+      }));
+      
+      setLogs(typedLogs);
+      return typedLogs;
     } catch (error) {
       console.error('Erro ao buscar logs:', error);
       setLogs([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -94,7 +101,10 @@ export const useActivityLogs = () => {
         },
         (payload) => {
           console.log('📨 Novo log recebido via realtime:', payload);
-          const newLog = payload.new as ActivityLog;
+          const newLog = {
+            ...payload.new,
+            action_type: payload.new.action_type as 'created' | 'completed' | 'updated' | 'deleted'
+          } as ActivityLog;
           setLogs(prevLogs => [newLog, ...prevLogs.slice(0, 4)]);
         }
       )

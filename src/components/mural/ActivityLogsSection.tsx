@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale';
 const ActivityLogsSection: React.FC = () => {
   const { logs, loading, fetchLogs, getActionText, getActionColor } = useActivityLogs();
   const [showFullLog, setShowFullLog] = useState(false);
-  const [fullLogs, setFullLogs] = useState([]);
+  const [fullLogs, setFullLogs] = useState<any[]>([]);
 
   const handleShowFullLog = async () => {
     setShowFullLog(true);
@@ -69,7 +69,7 @@ const ActivityLogsSection: React.FC = () => {
                   </DialogHeader>
                   <ScrollArea className="h-96">
                     <div className="space-y-3 pr-4">
-                      {logs.map((log) => (
+                      {fullLogs.map((log) => (
                         <div key={log.id} className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 pb-3">
                           <div className="flex items-start gap-2">
                             <div className="flex-1">
