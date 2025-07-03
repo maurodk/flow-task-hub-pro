@@ -87,6 +87,54 @@ export type Database = {
           },
         ]
       }
+      activity_logs: {
+        Row: {
+          action_type: string
+          activity_id: string | null
+          activity_title: string
+          created_at: string
+          id: string
+          sector_id: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action_type: string
+          activity_id?: string | null
+          activity_title: string
+          created_at?: string
+          id?: string
+          sector_id?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action_type?: string
+          activity_id?: string | null
+          activity_title?: string
+          created_at?: string
+          id?: string
+          sector_id?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_logs_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_progress_logs: {
         Row: {
           activity_id: string

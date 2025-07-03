@@ -15,6 +15,7 @@ import PostActions from '@/components/mural/PostActions';
 import EditPostModal from '@/components/mural/EditPostModal';
 import DeletePostModal from '@/components/mural/DeletePostModal';
 import EventsSection from '@/components/mural/EventsSection';
+import ActivityLogsSection from '@/components/mural/ActivityLogsSection';
 import ChatTabs from '@/components/mural/ChatTabs';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -297,29 +298,8 @@ const Mural = () => {
             {/* Próximos eventos interativos */}
             <EventsSection />
 
-            {/* Atividade recente */}
-            <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-gray-900 dark:text-white">Atividade Recente</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-sm">
-                  <p className="text-gray-900 dark:text-white font-medium">Ana Costa</p>
-                  <p className="text-gray-600 dark:text-gray-300">Completou projeto "Website Redesign"</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">30 min atrás</p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-gray-900 dark:text-white font-medium">Pedro Lima</p>
-                  <p className="text-gray-600 dark:text-gray-300">Adicionou nova atividade</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">1h atrás</p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-gray-900 dark:text-white font-medium">Lucia Ferreira</p>
-                  <p className="text-gray-600 dark:text-gray-300">Comentou em "Reunião de Planejamento"</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">2h atrás</p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Log de atividades recentes em tempo real */}
+            <ActivityLogsSection />
           </div>
         </div>
       </div>
