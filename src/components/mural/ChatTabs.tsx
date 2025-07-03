@@ -189,9 +189,11 @@ const ChatTabs: React.FC<ChatTabsProps> = ({
         </Button>
       </div>
 
-      <TabsContent value={activeTab} className="mt-0">
-        {children}
-      </TabsContent>
+      <Tabs value={activeTab} onValueChange={onTabChange}>
+        <TabsContent value={activeTab} className="mt-0">
+          {children}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
