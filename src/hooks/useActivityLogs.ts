@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,17 +59,23 @@ export const useActivityLogs = () => {
   };
 
   const getActionText = (log: ActivityLog) => {
+    // Se tem detalhes específicos (como subtarefas), usar eles com mais contexto
+    if (log.details && log.subtask_title) {
+      return `${log.details} "${log.subtask_title}" na atividade "${log.activity_title}"`;
+    }
+    
+    // Caso contrário, usar os textos padrão
     switch (log.action_type) {
       case 'created':
-        return 'criou a atividade';
+        return `criou a atividade "${log.activity_title}"`;
       case 'completed':
-        return 'completou a atividade';
+        return `completou a atividade "${log.activity_title}"`;
       case 'updated':
-        return 'atualizou a atividade';
+        return `atualizou a atividade "${log.activity_title}"`;
       case 'deleted':
-        return 'excluiu a atividade';
+        return `excluiu a atividade "${log.activity_title}"`;
       default:
-        return 'modificou a atividade';
+        return `modificou a atividade "${log.activity_title}"`;
     }
   };
 

@@ -80,9 +80,6 @@ const ActivityLogsSection: React.FC = () => {
                                 <span className="mx-1 text-gray-500 dark:text-gray-400">
                                   {getActionText(log)}
                                 </span>
-                                <span className={`font-medium ${getActionColor(log.action_type)}`}>
-                                  "{log.activity_title}"
-                                </span>
                               </p>
                               <div className="flex items-center gap-1 mt-1">
                                 <Clock className="h-3 w-3 text-gray-400" />
@@ -119,9 +116,6 @@ const ActivityLogsSection: React.FC = () => {
                   <span className="mx-1 text-gray-600 dark:text-gray-300">
                     {getActionText(log)}
                   </span>
-                </p>
-                <p className={`font-medium mb-1 ${getActionColor(log.action_type)}`}>
-                  "{log.activity_title}"
                 </p>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3 text-gray-400" />
