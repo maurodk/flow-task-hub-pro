@@ -1,12 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Trash2, Calendar, CheckCircle, Clock, Activity } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Edit, Trash2, Calendar, CheckCircle, Clock, Activity, ChevronDown, ChevronUp, History } from 'lucide-react';
 import { ActivityData } from '@/types/activity';
+import ActivityLogPanel from './ActivityLogPanel';
 
 interface ActivityCardProps {
   activity: ActivityData;
@@ -21,6 +23,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   onDelete,
   onToggleSubtask,
 }) => {
+  const [showLog, setShowLog] = useState(false);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-4 w-4 text-gray-500" />;
@@ -67,6 +71,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             )}
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowLog(!showLog)}
+              className="text-purple-500 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+            >
+              <History className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -127,6 +139,24 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             </div>
             <Progress value={activity.progress} className="h-2" />
           </div>
+
+          {/* Painel de Log Colapsável */}
+          <Collapsible open={showLog} onOpenChange={setShowLog}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300"
+              >
+                <History className="h-4 w-4" />
+                {showLog ? 'Ocultar Histórico' : 'Ver Histórico'}
+                {showLog ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <ActivityLogPanel activityId={activity.id} />
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </CardContent>
     </Card>
