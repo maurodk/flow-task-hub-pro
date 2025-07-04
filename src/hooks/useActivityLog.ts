@@ -43,6 +43,12 @@ export const useActivityLog = (activityId: string) => {
   };
 
   const getActionText = (log: ActivityLog) => {
+    // Se tem detalhes específicos (como subtarefas), usar eles
+    if (log.details && log.subtask_title) {
+      return `${log.details} "${log.subtask_title}"`;
+    }
+    
+    // Caso contrário, usar os textos padrão
     switch (log.action_type) {
       case 'created':
         return 'criou a atividade';

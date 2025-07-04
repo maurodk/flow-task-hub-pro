@@ -61,9 +61,11 @@ const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({ activityId }) => {
                         <span className="mx-1 text-gray-500 dark:text-gray-400">
                           {getActionText(log)}
                         </span>
-                        <span className={`font-medium ${getActionColor(log.action_type)}`}>
-                          "{log.activity_title}"
-                        </span>
+                        {!log.details && (
+                          <span className={`font-medium ${getActionColor(log.action_type)}`}>
+                            "{log.activity_title}"
+                          </span>
+                        )}
                       </p>
                       <div className="flex items-center gap-1 mt-1">
                         <Clock className="h-3 w-3 text-gray-400" />

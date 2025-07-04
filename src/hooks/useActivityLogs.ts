@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,8 @@ export interface ActivityLog {
   created_at: string;
   user_name: string | null;
   activity_title: string;
+  details?: string | null;
+  subtask_title?: string | null;
 }
 
 export const useActivityLogs = () => {
