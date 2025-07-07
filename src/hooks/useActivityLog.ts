@@ -43,23 +43,28 @@ export const useActivityLog = (activityId: string) => {
   };
 
   const getActionText = (log: ActivityLog) => {
-    // Se tem detalhes específicos (como subtarefas), usar eles com mais contexto
+    // Priorizar detalhes específicos com contexto completo
     if (log.details && log.subtask_title) {
-      return `${log.details} "${log.subtask_title}" na atividade "${log.activity_title}"`;
+      return `${log.details} "${log.subtask_title}"`;
+    }
+    
+    // Se tem detalhes específicos mas não é de subtarefa, usar os detalhes
+    if (log.details) {
+      return log.details;
     }
     
     // Caso contrário, usar os textos padrão
     switch (log.action_type) {
       case 'created':
-        return `criou a atividade "${log.activity_title}"`;
+        return 'criou a atividade';
       case 'completed':
-        return `completou a atividade "${log.activity_title}"`;
+        return 'completou a atividade';
       case 'updated':
-        return `atualizou a atividade "${log.activity_title}"`;
+        return 'atualizou a atividade';
       case 'deleted':
-        return `excluiu a atividade "${log.activity_title}"`;
+        return 'excluiu a atividade';
       default:
-        return `modificou a atividade "${log.activity_title}"`;
+        return 'modificou a atividade';
     }
   };
 
