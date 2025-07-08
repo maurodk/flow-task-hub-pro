@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface NotificationPreferences {
   id: string;
@@ -46,7 +47,12 @@ export const useNotificationPreferences = () => {
       }
 
       if (data) {
-        setPreferences(data);
+        // Converter dados do Supabase para interface local
+        const typedPreferences: NotificationPreferences = {
+          ...data,
+          notification_types: data.notification_types as NotificationPreferences['notification_types']
+        };
+        setPreferences(typedPreferences);
       } else {
         // Criar preferências padrão se não existirem
         await createDefaultPreferences();
@@ -83,7 +89,12 @@ export const useNotificationPreferences = () => {
 
       if (error) throw error;
 
-      setPreferences(data);
+      // Converter dados do Supabase para interface local
+      const typedPreferences: NotificationPreferences = {
+        ...data,
+        notification_types: data.notification_types as NotificationPreferences['notification_types']
+      };
+      setPreferences(typedPreferences);
       
     } catch (error) {
       console.error('Erro ao criar preferências padrão:', error);
@@ -106,7 +117,12 @@ export const useNotificationPreferences = () => {
 
       if (error) throw error;
 
-      setPreferences(data);
+      // Converter dados do Supabase para interface local
+      const typedPreferences: NotificationPreferences = {
+        ...data,
+        notification_types: data.notification_types as NotificationPreferences['notification_types']
+      };
+      setPreferences(typedPreferences);
       
     } catch (error) {
       console.error('Erro ao atualizar preferências:', error);

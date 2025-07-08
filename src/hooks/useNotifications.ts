@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface Notification {
   id: string;
@@ -40,10 +41,17 @@ export const useNotifications = () => {
       if (error) throw error;
 
       console.log('📨 Notificações encontradas:', data?.length || 0);
-      setNotifications(data || []);
+      
+      // Converter tipos do Supabase para interface local
+      const typedNotifications: Notification[] = (data || []).map(item => ({
+        ...item,
+        type: item.type as Notification['type']
+      }));
+      
+      setNotifications(typedNotifications);
       
       // Contar não lidas
-      const unread = (data || []).filter(n => !n.read_at).length;
+      const unread = typedNotifications.filter(n => !n.read_at).length;
       setUnreadCount(unread);
       
     } catch (error) {
@@ -137,15 +145,20 @@ export const useNotifications = () => {
         },
         (payload) => {
           console.log('📨 Nova notificação recebida via realtime:', payload);
-          const newNotification = payload.new as Notification;
+          const newNotification = payload.new as Tables<'notifications'>;
           
-          setNotifications(prev => [newNotification, ...prev]);
+          const typedNotification: Notification = {
+            ...newNotification,
+            type: newNotification.type as Notification['type']
+          };
+          
+          setNotifications(prev => [typedNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
           
           // Mostrar notificação popup se o usuário permitir
           if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(newNotification.title, {
-              body: newNotification.message,
+            new Notification(typedNotification.title, {
+              body: typedNotification.message,
               icon: '/favicon.ico'
             });
           }

@@ -7,7 +7,7 @@ import { Bell, Check, CheckCheck, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuHeader,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuItem,
@@ -49,7 +49,7 @@ const NotificationCenter: React.FC = () => {
         </DropdownMenuTrigger>
         
         <DropdownMenuContent align="end" className="w-80">
-          <DropdownMenuHeader className="font-semibold text-sm p-2">
+          <DropdownMenuLabel className="font-semibold text-sm p-2">
             <div className="flex items-center justify-between">
               <span>Notificações</span>
               <div className="flex gap-1">
@@ -75,7 +75,7 @@ const NotificationCenter: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </DropdownMenuHeader>
+          </DropdownMenuLabel>
           
           <DropdownMenuSeparator />
           
