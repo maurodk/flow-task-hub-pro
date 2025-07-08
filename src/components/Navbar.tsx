@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { 
   Home, 
   Calendar, 
@@ -103,6 +105,7 @@ const Navbar = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-2">
+            <NotificationCenter />
             <ThemeToggle />
             
             <Button 
