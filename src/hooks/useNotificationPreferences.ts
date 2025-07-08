@@ -38,7 +38,12 @@ export const useNotificationPreferences = () => {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
-        setPreferences(data);
+        // Type casting do Json para nosso tipo específico
+        const typedData: NotificationPreferences = {
+          ...data,
+          notification_types: data.notification_types as NotificationPreferences['notification_types']
+        };
+        setPreferences(typedData);
       } else {
         // Create default preferences
         const defaultPreferences = {
@@ -64,7 +69,13 @@ export const useNotificationPreferences = () => {
           .single();
 
         if (insertError) throw insertError;
-        setPreferences(newData);
+        
+        // Type casting do Json para nosso tipo específico
+        const typedNewData: NotificationPreferences = {
+          ...newData,
+          notification_types: newData.notification_types as NotificationPreferences['notification_types']
+        };
+        setPreferences(typedNewData);
       }
     } catch (error) {
       console.error('Erro ao buscar preferências de notificação:', error);
@@ -85,7 +96,13 @@ export const useNotificationPreferences = () => {
         .single();
 
       if (error) throw error;
-      setPreferences(data);
+      
+      // Type casting do Json para nosso tipo específico
+      const typedData: NotificationPreferences = {
+        ...data,
+        notification_types: data.notification_types as NotificationPreferences['notification_types']
+      };
+      setPreferences(typedData);
     } catch (error) {
       console.error('Erro ao atualizar preferências:', error);
     }
