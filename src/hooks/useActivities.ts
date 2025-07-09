@@ -16,6 +16,46 @@ export const useActivities = () => {
   const [selectedSector, setSelectedSector] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
+  // Realtime subscription for activities
+  useEffect(() => {
+    if (!user || roleLoading || sectorsLoading) return;
+
+    console.log('🔄 Configurando subscription em tempo real para atividades');
+    
+    const channel = supabase
+      .channel('activities_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activities'
+        },
+        (payload) => {
+          console.log('📢 Mudança detectada em atividades:', payload);
+          fetchActivities(selectedSector);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activity_subtasks'
+        },
+        (payload) => {
+          console.log('📢 Mudança detectada em subtarefas:', payload);
+          fetchActivities(selectedSector);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔌 Removendo subscription de atividades');
+      supabase.removeChannel(channel);
+    };
+  }, [user, roleLoading, sectorsLoading, selectedSector]);
+
   const fetchActivities = async (sectorFilter?: string) => {
     if (!user || roleLoading || sectorsLoading) return;
 
@@ -24,9 +64,6 @@ export const useActivities = () => {
       console.log('👤 É admin?', isAdmin);
       console.log('🏢 Setores do usuário:', userSectors.map(us => us.sector_id));
 
-      // Com RLS ativo, a consulta já está protegida automaticamente
-      // Usuários só verão atividades próprias ou de setores onde pertencem
-      // Admins verão todas as atividades
       let query = supabase
         .from('activities')
         .select(`
@@ -35,7 +72,6 @@ export const useActivities = () => {
           sector:sectors(name)
         `);
 
-      // Aplicar filtro de setor específico se selecionado
       if (sectorFilter) {
         query = query.eq('sector_id', sectorFilter);
       }
@@ -48,7 +84,6 @@ export const useActivities = () => {
 
       const formattedActivities = data?.map(activity => ({
         ...activity,
-        // Converter "on_hold" para "pending" para manter compatibilidade
         status: activity.status === 'on_hold' ? 'pending' : activity.status as 'pending' | 'in_progress' | 'completed',
         priority: activity.priority as 'low' | 'medium' | 'high',
         activity_type: activity.activity_type as 'standard' | 'template_based' | 'recurring',
@@ -74,7 +109,6 @@ export const useActivities = () => {
     if (!user) return;
 
     try {
-      // Com RLS ativo, usuário só vê seus próprios templates
       const { data, error } = await supabase
         .from('user_activity_templates')
         .select(`
@@ -123,13 +157,11 @@ export const useActivities = () => {
     if (!user) return;
 
     try {
-      // Calcular próxima execução para atividades recorrentes
       let nextDueAt = null;
       if (formData.is_recurring && formData.recurrence_type && formData.recurrence_time) {
         nextDueAt = calculateNextDueDate(formData.recurrence_type, formData.recurrence_time);
       }
 
-      // Com RLS ativo, apenas o próprio usuário pode criar atividades em seu nome
       const { data: activity, error } = await supabase
         .from('activities')
         .insert({
@@ -165,7 +197,6 @@ export const useActivities = () => {
 
   const toggleSubtask = async (activityId: string, subtaskId: string, isCompleted: boolean) => {
     try {
-      // Com RLS ativo, apenas usuários autorizados podem modificar subtasks
       const { error } = await supabase
         .from('activity_subtasks')
         .update({ 
@@ -176,7 +207,7 @@ export const useActivities = () => {
 
       if (error) throw error;
 
-      fetchActivities(selectedSector);
+      // Não chamar fetchActivities aqui, pois o realtime subscription vai atualizar automaticamente
     } catch (error: any) {
       console.error('Erro ao atualizar subtask:', error);
       if (error.message.includes('row-level security')) {
@@ -189,16 +220,32 @@ export const useActivities = () => {
 
   const deleteActivity = async (activityId: string) => {
     try {
-      // Com RLS ativo, apenas o proprietário ou admin pode excluir
+      console.log('🗑️ Tentando excluir atividade:', activityId);
+      
+      // Primeiro excluir subtarefas relacionadas
+      const { error: subtasksError } = await supabase
+        .from('activity_subtasks')
+        .delete()
+        .eq('activity_id', activityId);
+
+      if (subtasksError) {
+        console.error('Erro ao excluir subtarefas:', subtasksError);
+        throw subtasksError;
+      }
+
+      // Depois excluir a atividade
       const { error } = await supabase
         .from('activities')
         .delete()
         .eq('id', activityId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao excluir atividade:', error);
+        throw error;
+      }
 
-      toast.success('Atividade excluída!');
-      fetchActivities(selectedSector);
+      toast.success('Atividade excluída com sucesso!');
+      // Não chamar fetchActivities aqui, pois o realtime subscription vai atualizar automaticamente
     } catch (error: any) {
       console.error('Erro ao excluir atividade:', error);
       if (error.message.includes('row-level security')) {
@@ -210,7 +257,6 @@ export const useActivities = () => {
   };
 
   useEffect(() => {
-    // Só buscar atividades quando todas as dependências estiverem carregadas
     if (!roleLoading && !sectorsLoading) {
       fetchActivities(selectedSector);
       fetchUserTemplates();

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,6 +43,34 @@ export const useMural = () => {
   const [selectedSector, setSelectedSector] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('geral');
   const [loading, setLoading] = useState(true);
+
+  // Realtime subscription for posts
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('🔄 Configurando subscription em tempo real para posts');
+    
+    const channel = supabase
+      .channel('mural_posts_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mural_posts'
+        },
+        (payload) => {
+          console.log('📢 Mudança detectada em posts:', payload);
+          refreshCurrentTab();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔌 Removendo subscription de posts');
+      supabase.removeChannel(channel);
+    };
+  }, [user, activeTab]);
 
   const uploadFile = async (file: File, folder: string = 'general'): Promise<string | null> => {
     if (!user) return null;
@@ -97,10 +124,10 @@ export const useMural = () => {
         `)
         .order('created_at', { ascending: false });
 
-      // Aplicar filtros baseado na aba ativa
+      // Filtros ajustados para melhor visibilidade
       if (filter?.isGeneral) {
-        // Aba Geral: posts sem setor e sem chat room específico
-        query = query.is('sector_id', null).is('chat_room_id', null);
+        // Aba Geral: posts públicos (sem setor e sem chat room) OU posts de setores acessíveis pelo usuário
+        query = query.or('sector_id.is.null,chat_room_id.is.null');
       } else if (filter?.sectorId) {
         // Aba de Setor: posts do setor específico (sem chat room)
         query = query.eq('sector_id', filter.sectorId).is('chat_room_id', null);
@@ -109,11 +136,15 @@ export const useMural = () => {
         query = query.eq('chat_room_id', filter.chatRoomId);
       }
 
+      console.log('🔍 Buscando posts com filtro:', filter);
+
       const { data: postsData, error: postsError } = await query;
 
       if (postsError) throw postsError;
 
       if (postsData) {
+        console.log(`📊 ${postsData.length} posts encontrados`);
+        
         const postsWithMetadata = await Promise.all(
           postsData.map(async (post) => {
             const [likesResult, commentsResult, userLikeResult, profileResult] = await Promise.all([
@@ -244,6 +275,8 @@ export const useMural = () => {
         postSectorId = sectorId;
       }
 
+      console.log('📝 Criando post:', { title, postSectorId, postChatRoomId, activeTab });
+
       const { error } = await supabase
         .from('mural_posts')
         .insert({
@@ -259,7 +292,7 @@ export const useMural = () => {
       if (error) throw error;
 
       toast.success('Post criado com sucesso!');
-      refreshCurrentTab();
+      // Não chamar refreshCurrentTab aqui, pois o realtime subscription vai atualizar automaticamente
     } catch (error) {
       console.error('Erro ao criar post:', error);
       toast.error('Erro ao criar post');
@@ -299,7 +332,7 @@ export const useMural = () => {
 
       toast.success('Comentário adicionado!');
       fetchComments(postId);
-      refreshCurrentTab(); // Usar refreshCurrentTab ao invés de fetchPosts com selectedSector
+      refreshCurrentTab();
     } catch (error) {
       console.error('Erro ao criar comentário:', error);
       toast.error('Erro ao comentar');
@@ -335,7 +368,7 @@ export const useMural = () => {
         if (error) throw error;
       }
 
-      refreshCurrentTab(); // Usar refreshCurrentTab ao invés de fetchPosts sem parâmetros
+      refreshCurrentTab();
     } catch (error) {
       console.error('Erro ao curtir post:', error);
       toast.error('Erro ao curtir post');
@@ -369,7 +402,6 @@ export const useMural = () => {
         updated_at: new Date().toISOString()
       };
 
-      // Não alterar setor/chat room ao editar - manter na aba atual
       if (files && files.length > 0) {
         updateData.attachments = attachments;
       }
@@ -397,7 +429,6 @@ export const useMural = () => {
     }
 
     try {
-      // Primeiro, excluir comentários relacionados
       const { error: commentsError } = await supabase
         .from('mural_comments')
         .delete()
@@ -405,7 +436,6 @@ export const useMural = () => {
 
       if (commentsError) throw commentsError;
 
-      // Depois, excluir curtidas relacionadas
       const { error: likesError } = await supabase
         .from('mural_likes')
         .delete()
@@ -413,7 +443,6 @@ export const useMural = () => {
 
       if (likesError) throw likesError;
 
-      // Por fim, excluir o post
       const { error } = await supabase
         .from('mural_posts')
         .delete()
@@ -431,6 +460,7 @@ export const useMural = () => {
   };
 
   const refreshCurrentTab = () => {
+    console.log('🔄 Atualizando aba atual:', activeTab);
     if (activeTab === 'geral') {
       fetchPosts({ isGeneral: true });
     } else if (activeTab.startsWith('sector-')) {
@@ -443,6 +473,7 @@ export const useMural = () => {
   };
 
   const handleTabChange = (newTab: string) => {
+    console.log('📑 Mudando para aba:', newTab);
     setActiveTab(newTab);
     if (newTab === 'geral') {
       fetchPosts({ isGeneral: true });
