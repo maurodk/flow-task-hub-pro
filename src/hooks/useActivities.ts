@@ -222,18 +222,7 @@ export const useActivities = () => {
     try {
       console.log('🗑️ Tentando excluir atividade:', activityId);
       
-      // Primeiro excluir subtarefas relacionadas
-      const { error: subtasksError } = await supabase
-        .from('activity_subtasks')
-        .delete()
-        .eq('activity_id', activityId);
-
-      if (subtasksError) {
-        console.error('Erro ao excluir subtarefas:', subtasksError);
-        throw subtasksError;
-      }
-
-      // Depois excluir a atividade
+      // Excluir a atividade - o trigger já vai criar o log e as subtarefas serão excluídas por cascade
       const { error } = await supabase
         .from('activities')
         .delete()
@@ -244,6 +233,7 @@ export const useActivities = () => {
         throw error;
       }
 
+      console.log('✅ Atividade excluída com sucesso');
       toast.success('Atividade excluída com sucesso!');
       // Não chamar fetchActivities aqui, pois o realtime subscription vai atualizar automaticamente
     } catch (error: any) {
