@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Navbar from "@/components/Navbar";
 import Auth from "./pages/Auth";
+import AuthConfirm from "./pages/AuthConfirm";
 import Dashboard from "./pages/NewDashboard";
 import Activities from "./pages/Activities";
 import Profile from "./pages/Profile";
@@ -68,6 +69,10 @@ const AppRoutes = () => (
           <Auth />
         </PublicRoute>
       } 
+    />
+    <Route 
+      path="/auth/confirm" 
+      element={<AuthConfirm />}
     />
     <Route 
       path="/dashboard" 

@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Shield, Users, Key, Mail, Building2 } from 'lucide-react';
+import { Shield, Users, Key, Mail, Building2, Trash2, Eye, EyeOff, Edit } from 'lucide-react';
 import SectorManagement from './SectorManagement';
 
 interface User {
@@ -30,6 +30,9 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -118,42 +121,38 @@ const AdminPanel = () => {
     }
   };
 
-  const updateUserPassword = async () => {
-    if (!selectedUser || !newPassword) return;
-
+  const updateUser = async (userId: string, updates: { email?: string; password?: string; name?: string }) => {
     try {
-      const { error } = await supabase.auth.admin.updateUserById(selectedUser.id, {
-        password: newPassword
+      const { data, error } = await supabase.functions.invoke('admin-update-user', {
+        body: { userId, ...updates }
       });
 
       if (error) throw error;
 
-      toast.success('Senha atualizada com sucesso');
+      toast.success('Usuário atualizado com sucesso');
       setNewPassword('');
-      setSelectedUser(null);
-    } catch (error: any) {
-      console.error('Erro ao atualizar senha:', error);
-      toast.error('Erro ao atualizar senha');
-    }
-  };
-
-  const updateUserEmail = async () => {
-    if (!selectedUser || !newEmail) return;
-
-    try {
-      const { error } = await supabase.auth.admin.updateUserById(selectedUser.id, {
-        email: newEmail
-      });
-
-      if (error) throw error;
-
-      toast.success('Email atualizado com sucesso');
       setNewEmail('');
       setSelectedUser(null);
       fetchUsers();
     } catch (error: any) {
-      console.error('Erro ao atualizar email:', error);
-      toast.error('Erro ao atualizar email');
+      console.error('Erro ao atualizar usuário:', error);
+      toast.error('Erro ao atualizar usuário');
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
+      });
+
+      if (error) throw error;
+
+      toast.success('Usuário excluído com sucesso');
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Erro ao excluir usuário:', error);
+      toast.error('Erro ao excluir usuário');
     }
   };
 
@@ -248,75 +247,84 @@ const AdminPanel = () => {
                           onClick={() => {
                             setSelectedUser(user);
                             setNewPassword('');
-                          }}
-                        >
-                          <Key className="h-4 w-4 mr-2" />
-                          Alterar Senha
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Alterar Senha</DialogTitle>
-                          <DialogDescription>
-                            Alterar senha para {user.profiles?.name || user.email}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="new-password">Nova Senha</Label>
-                            <Input
-                              id="new-password"
-                              type="password"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="Digite a nova senha"
-                            />
-                          </div>
-                          <Button onClick={updateUserPassword} disabled={!newPassword}>
-                            Atualizar Senha
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
                             setNewEmail(user.email);
+                            setShowPassword(false);
                           }}
                         >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Alterar Email
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Alterar Email</DialogTitle>
+                          <DialogTitle>Editar Usuário</DialogTitle>
                           <DialogDescription>
-                            Alterar email para {user.profiles?.name || user.email}
+                            Editar informações de {user.profiles?.name || user.email}
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="new-email">Novo Email</Label>
+                            <Label htmlFor="edit-email">Email</Label>
                             <Input
-                              id="new-email"
+                              id="edit-email"
                               type="email"
                               value={newEmail}
                               onChange={(e) => setNewEmail(e.target.value)}
                               placeholder="Digite o novo email"
                             />
                           </div>
-                          <Button onClick={updateUserEmail} disabled={!newEmail}>
-                            Atualizar Email
-                          </Button>
+                          <div>
+                            <Label htmlFor="edit-password">Nova Senha (opcional)</Label>
+                            <div className="relative">
+                              <Input
+                                id="edit-password"
+                                type={showPassword ? "text" : "password"}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="Digite a nova senha"
+                                className="pr-10"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-0 top-0 h-full px-3"
+                                onClick={() => setShowPassword(!showPassword)}
+                              >
+                                {showPassword ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
                         </div>
+                        <DialogFooter>
+                          <Button 
+                            onClick={() => updateUser(user.id, { 
+                              email: newEmail !== user.email ? newEmail : undefined,
+                              password: newPassword || undefined 
+                            })} 
+                            disabled={!newEmail}
+                          >
+                            Salvar Alterações
+                          </Button>
+                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setUserToDelete(user);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -328,6 +336,42 @@ const AdminPanel = () => {
           <SectorManagement />
         </TabsContent>
       </Tabs>
+
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Usuário</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o usuário {userToDelete?.profiles?.name || userToDelete?.email}?
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setUserToDelete(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (userToDelete) {
+                  deleteUser(userToDelete.id);
+                  setIsDeleteDialogOpen(false);
+                  setUserToDelete(null);
+                }
+              }}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
