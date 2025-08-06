@@ -1,20 +1,30 @@
 
 import React from 'react';
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Shield } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
+  ContextMenuSeparator,
 } from '@/components/ui/context-menu';
 import { Button } from '@/components/ui/button';
 
 interface PostActionsProps {
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
+  onAdminDelete?: () => void;
+  isOwner: boolean;
+  isAdmin: boolean;
 }
 
-const PostActions: React.FC<PostActionsProps> = ({ onEdit, onDelete }) => {
+const PostActions: React.FC<PostActionsProps> = ({ 
+  onEdit, 
+  onDelete, 
+  onAdminDelete, 
+  isOwner, 
+  isAdmin 
+}) => {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -27,14 +37,29 @@ const PostActions: React.FC<PostActionsProps> = ({ onEdit, onDelete }) => {
         </Button>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={onEdit} className="flex items-center gap-2 cursor-pointer">
-          <Edit className="h-4 w-4" />
-          Editar post
-        </ContextMenuItem>
-        <ContextMenuItem onClick={onDelete} className="flex items-center gap-2 cursor-pointer text-red-600 dark:text-red-400">
-          <Trash2 className="h-4 w-4" />
-          Excluir post
-        </ContextMenuItem>
+        {isOwner && onEdit && (
+          <ContextMenuItem onClick={onEdit} className="flex items-center gap-2 cursor-pointer">
+            <Edit className="h-4 w-4" />
+            Editar post
+          </ContextMenuItem>
+        )}
+        
+        {isOwner && (
+          <ContextMenuItem onClick={onDelete} className="flex items-center gap-2 cursor-pointer text-red-600 dark:text-red-400">
+            <Trash2 className="h-4 w-4" />
+            Excluir post
+          </ContextMenuItem>
+        )}
+        
+        {isAdmin && !isOwner && onAdminDelete && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={onAdminDelete} className="flex items-center gap-2 cursor-pointer text-orange-600 dark:text-orange-400">
+              <Shield className="h-4 w-4" />
+              Excluir como Admin
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );

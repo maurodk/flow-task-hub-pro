@@ -21,6 +21,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminLogs } from '@/hooks/useAdminLogs';
 
 const Mural = () => {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ const Mural = () => {
   } = useMural();
 
   const { createChatRoom } = useChatRooms();
+  const { isAdmin } = useAdminLogs();
 
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const [createChatRoomOpen, setCreateChatRoomOpen] = useState(false);
@@ -72,9 +74,13 @@ const Mural = () => {
 
   const handleConfirmDelete = () => {
     if (deletingPost) {
-      deletePost(deletingPost.id);
+      deletePost(deletingPost.id, deletingPost.isAdminAction);
       setDeletingPost(null);
     }
+  };
+
+  const handleAdminDeletePost = (post: any) => {
+    setDeletingPost({ ...post, isAdminAction: true });
   };
 
   const handleCreateChatRoom = async (name: string, description: string, sectorIds: string[]) => {
@@ -210,10 +216,13 @@ const Mural = () => {
                                   })}
                                 </p>
                               </div>
-                              {user && user.id === post.user_id && (
+                              {user && (user.id === post.user_id || isAdmin) && (
                                 <PostActions 
-                                  onEdit={() => handleEditPost(post)}
+                                  onEdit={user.id === post.user_id ? () => handleEditPost(post) : undefined}
                                   onDelete={() => handleDeletePost(post)}
+                                  onAdminDelete={isAdmin && user.id !== post.user_id ? () => handleAdminDeletePost(post) : undefined}
+                                  isOwner={user.id === post.user_id}
+                                  isAdmin={isAdmin}
                                 />
                               )}
                             </div>

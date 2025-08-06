@@ -284,6 +284,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_action_logs: {
+        Row: {
+          action_type: string
+          admin_user_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string | null
+          target_title: string | null
+          target_type: string
+          target_user_id: string | null
+          target_user_name: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_user_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_title?: string | null
+          target_type: string
+          target_user_id?: string | null
+          target_user_name?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_user_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_title?: string | null
+          target_type?: string
+          target_user_id?: string | null
+          target_user_name?: string | null
+        }
+        Relationships: []
+      }
       chat_room_sectors: {
         Row: {
           chat_room_id: string
@@ -833,6 +872,18 @@ export type Database = {
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          p_action_type: string
+          p_target_type: string
+          p_target_id: string
+          p_target_title?: string
+          p_target_user_id?: string
+          p_target_user_name?: string
+          p_details?: Json
+        }
+        Returns: string
       }
       user_belongs_to_sector: {
         Args: { user_id: string; sector_id: string }

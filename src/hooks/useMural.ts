@@ -422,13 +422,28 @@ export const useMural = () => {
     }
   };
 
-  const deletePost = async (postId: string) => {
+  const deletePost = async (postId: string, isAdminAction: boolean = false) => {
     if (!user) {
       toast.error('Você precisa estar logado para excluir um post');
       return;
     }
 
     try {
+      // Buscar dados do post antes de excluir (para o log)
+      let postData = null;
+      if (isAdminAction) {
+        const { data: post } = await supabase
+          .from('mural_posts')
+          .select(`
+            title, content, user_id,
+            profiles:user_id (name)
+          `)
+          .eq('id', postId)
+          .single();
+        
+        postData = post;
+      }
+
       const { error: commentsError } = await supabase
         .from('mural_comments')
         .delete()
@@ -446,12 +461,31 @@ export const useMural = () => {
       const { error } = await supabase
         .from('mural_posts')
         .delete()
-        .eq('id', postId)
-        .eq('user_id', user.id);
+        .eq('id', postId);
 
       if (error) throw error;
 
-      toast.success('Post excluído com sucesso!');
+      // Se é ação administrativa, registrar no log
+      if (isAdminAction && postData) {
+        try {
+          await supabase.rpc('log_admin_action', {
+            p_action_type: 'delete_post',
+            p_target_type: 'mural_post',
+            p_target_id: postId,
+            p_target_title: postData.title,
+            p_target_user_id: postData.user_id,
+            p_target_user_name: postData.profiles?.name || 'Usuário',
+            p_details: {
+              content_preview: postData.content?.substring(0, 100) + (postData.content?.length > 100 ? '...' : ''),
+              reason: 'Exclusão administrativa'
+            }
+          });
+        } catch (logError) {
+          console.error('Erro ao registrar log administrativo:', logError);
+        }
+      }
+
+      toast.success(isAdminAction ? 'Post excluído pela administração' : 'Post excluído com sucesso!');
       refreshCurrentTab();
     } catch (error) {
       console.error('Erro ao excluir post:', error);
