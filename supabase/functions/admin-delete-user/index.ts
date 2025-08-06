@@ -65,13 +65,36 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Log para debug
+    console.log(`Attempting to delete user: ${userId}`);
+    
+    // Verificar dados relacionados antes da exclusão
+    const { data: userSectors } = await supabaseClient
+      .from('user_sectors')
+      .select('*')
+      .eq('user_id', userId);
+    
+    const { data: userRoles } = await supabaseClient
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId);
+    
+    console.log('User sectors found:', userSectors);
+    console.log('User roles found:', userRoles);
+    
     // Usar service role para deletar usuário
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
 
     if (deleteError) {
       console.error('Error deleting user:', deleteError);
+      console.error('Delete error details:', JSON.stringify(deleteError, null, 2));
       return new Response(
-        JSON.stringify({ error: deleteError.message }),
+        JSON.stringify({ 
+          error: deleteError.message,
+          details: deleteError,
+          userSectors: userSectors?.length || 0,
+          userRoles: userRoles?.length || 0
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
