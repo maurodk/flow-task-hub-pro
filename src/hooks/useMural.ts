@@ -44,14 +44,14 @@ export const useMural = () => {
   const [activeTab, setActiveTab] = useState<string>('geral');
   const [loading, setLoading] = useState(true);
 
-  // Realtime subscription for posts
+  // Realtime subscription for posts and comments
   useEffect(() => {
     if (!user) return;
 
-    console.log('🔄 Configurando subscription em tempo real para posts');
+    console.log('🔄 Configurando subscription em tempo real para posts e comentários');
     
     const channel = supabase
-      .channel('mural_posts_changes')
+      .channel('mural_changes')
       .on(
         'postgres_changes',
         {
@@ -64,10 +64,25 @@ export const useMural = () => {
           refreshCurrentTab();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mural_comments'
+        },
+        (payload) => {
+          console.log('📢 Mudança detectada em comentários:', payload);
+          if (payload.eventType === 'INSERT' && payload.new?.post_id) {
+            fetchComments(payload.new.post_id);
+          }
+          refreshCurrentTab();
+        }
+      )
       .subscribe();
 
     return () => {
-      console.log('🔌 Removendo subscription de posts');
+      console.log('🔌 Removendo subscription de posts e comentários');
       supabase.removeChannel(channel);
     };
   }, [user, activeTab]);
@@ -126,8 +141,8 @@ export const useMural = () => {
 
       // Filtros ajustados para melhor visibilidade
       if (filter?.isGeneral) {
-        // Aba Geral: posts públicos (sem setor e sem chat room) OU posts de setores acessíveis pelo usuário
-        query = query.or('sector_id.is.null,chat_room_id.is.null');
+        // Aba Geral: posts públicos (sem setor E sem chat room)
+        query = query.is('sector_id', null).is('chat_room_id', null);
       } else if (filter?.sectorId) {
         // Aba de Setor: posts do setor específico (sem chat room)
         query = query.eq('sector_id', filter.sectorId).is('chat_room_id', null);

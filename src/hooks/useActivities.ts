@@ -60,9 +60,15 @@ export const useActivities = () => {
     if (!user || roleLoading || sectorsLoading) return;
 
     try {
-      console.log('🔍 Buscando atividades para usuário:', user.id);
+      console.log('🔍 NewDashboard: Buscando atividades para usuário:', user.id);
       console.log('👤 É admin?', isAdmin);
       console.log('🏢 Setores do usuário:', userSectors.map(us => us.sector_id));
+      
+      if (isAdmin) {
+        console.log('🔓 Admin: buscando todas as atividades');
+      } else {
+        console.log('🔒 Usuário comum: buscando apenas atividades próprias e do setor');
+      }
 
       let query = supabase
         .from('activities')
@@ -91,7 +97,7 @@ export const useActivities = () => {
         sector_name: activity.sector?.name || null
       })) || [];
 
-      console.log('📋 Atividades encontradas (protegidas por RLS):', formattedActivities.length);
+      console.log('📋 NewDashboard: Atividades encontradas:', formattedActivities.length);
       setActivities(formattedActivities);
     } catch (error: any) {
       console.error('Erro ao buscar atividades:', error);
@@ -221,7 +227,24 @@ export const useActivities = () => {
   const deleteActivity = async (activityId: string) => {
     try {
       console.log('🗑️ Tentando excluir atividade:', activityId);
+      console.log('🔐 Usuário atual:', user?.id);
+      console.log('👤 É admin?', isAdmin);
       
+      // Verificar primeiro se o usuário pode excluir a atividade
+      const { data: activityData, error: fetchError } = await supabase
+        .from('activities')
+        .select('user_id, title, sector_id')
+        .eq('id', activityId)
+        .single();
+
+      if (fetchError) {
+        console.error('Erro ao buscar atividade para verificação:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('📋 Dados da atividade:', activityData);
+      console.log('✅ Verificação de acesso: usuário pode excluir');
+
       // Excluir a atividade - o trigger já vai criar o log e as subtarefas serão excluídas por cascade
       const { error } = await supabase
         .from('activities')
@@ -230,6 +253,7 @@ export const useActivities = () => {
 
       if (error) {
         console.error('Erro ao excluir atividade:', error);
+        console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
         throw error;
       }
 
@@ -240,8 +264,10 @@ export const useActivities = () => {
       console.error('Erro ao excluir atividade:', error);
       if (error.message.includes('row-level security')) {
         toast.error('Você não tem permissão para excluir esta atividade');
+      } else if (error.message.includes('violates row-level security policy')) {
+        toast.error('Acesso negado: você só pode excluir suas próprias atividades');
       } else {
-        toast.error('Erro ao excluir atividade');
+        toast.error(`Erro ao excluir atividade: ${error.message}`);
       }
     }
   };
