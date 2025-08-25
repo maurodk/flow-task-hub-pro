@@ -226,30 +226,15 @@ export const useActivities = () => {
 
   const deleteActivity = async (activityId: string) => {
     try {
-      console.log('🗑️ Tentando excluir atividade:', activityId);
+      console.log('🗑️ Tentando excluir atividade usando função segura:', activityId);
       console.log('🔐 Usuário atual:', user?.id);
       console.log('👤 É admin?', isAdmin);
       
-      // Verificar primeiro se o usuário pode excluir a atividade
-      const { data: activityData, error: fetchError } = await supabase
-        .from('activities')
-        .select('user_id, title, sector_id')
-        .eq('id', activityId)
-        .single();
-
-      if (fetchError) {
-        console.error('Erro ao buscar atividade para verificação:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('📋 Dados da atividade:', activityData);
-      console.log('✅ Verificação de acesso: usuário pode excluir');
-
-      // Excluir a atividade - o trigger já vai criar o log e as subtarefas serão excluídas por cascade
-      const { error } = await supabase
-        .from('activities')
-        .delete()
-        .eq('id', activityId);
+      // Usar a função safe_delete_activity que trata os logs corretamente
+      const { data, error } = await supabase
+        .rpc('safe_delete_activity', { 
+          activity_id: activityId 
+        });
 
       if (error) {
         console.error('Erro ao excluir atividade:', error);
@@ -257,7 +242,8 @@ export const useActivities = () => {
         throw error;
       }
 
-      console.log('✅ Atividade excluída com sucesso');
+      console.log('✅ Atividade excluída com sucesso via safe_delete_activity');
+      console.log('📊 Resultado da função:', data);
       toast.success('Atividade excluída com sucesso!');
       // Não chamar fetchActivities aqui, pois o realtime subscription vai atualizar automaticamente
     } catch (error: any) {
