@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -850,11 +850,11 @@ export type Database = {
     Functions: {
       create_notification: {
         Args: {
-          target_user_id: string
-          notification_type: string
-          notification_title: string
-          notification_message: string
           notification_data?: Json
+          notification_message: string
+          notification_title: string
+          notification_type: string
+          target_user_id: string
         }
         Returns: string
       }
@@ -876,17 +876,17 @@ export type Database = {
       log_admin_action: {
         Args: {
           p_action_type: string
-          p_target_type: string
+          p_details?: Json
           p_target_id: string
           p_target_title?: string
+          p_target_type: string
           p_target_user_id?: string
           p_target_user_name?: string
-          p_details?: Json
         }
         Returns: string
       }
       user_belongs_to_sector: {
-        Args: { user_id: string; sector_id: string }
+        Args: { sector_id: string; user_id: string }
         Returns: boolean
       }
       user_can_access_chat_room: {
